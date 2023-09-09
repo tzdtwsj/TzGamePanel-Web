@@ -1,4 +1,5 @@
 <?php
+#此文件已被舍弃
 chdir(__DIR__);
 require 'func.php';
 if(PHP_SAPI!="cli"){
