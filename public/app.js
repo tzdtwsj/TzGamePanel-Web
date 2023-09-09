@@ -9,6 +9,7 @@ function request(str){
 "<a onclick=\"page('main');page('nodes');\" mdui-drawer-close><li class=\"mdui-list-item mdui-ripple\">节点管理</li></a>";
 function page(str){
 	let toolbar = "<div class=\"mdui-appbar\"><div class=\"mdui-toolbar\"><button class=\"mdui-btn mdui-btn-icon mdui-ripple\" id=\"toolbar-open-drawer\" mdui-drawer=\"{target:'#toolbar-drawer'}\"><i class=\"mdui-icon material-icons\">menu</i></button><a onclick=\"page('main');page('status');\"><span class=\"mdui-typo-title\">TzGamePanel</span></a><div class=\"mdui-toolbar-spacer\"></div><button class=\"mdui-btn mdui-btn-icon mdui-ripple\" mdui-menu=\"{target:'#toolbar-menu'}\"><i class=\"mdui-icon material-icons\">account_circle</i></button><ul class=\"mdui-menu\" id=\"toolbar-menu\"><li class=\"mdui-menu-item\"><a class=\"mdui-ripple\" id=\"toolbar-menu-username\" onclick=\"page('main');page('account');\"></a></li><li class=\"mdui-divider\"></li><li class=\"mdui-menu-item\"><a class=\"mdui-ripple\" id=\"toolbar-menu-logout\" onclick=\"logout();\">登出</a></li></ul><div class=\"mdui-drawer\" id=\"toolbar-drawer\"><ul class=\"mdui-list\"><a onclick=\"page('main');page('status');\" mdui-drawer-close><li class=\"mdui-list-item mdui-ripple\">首页</li></a>";
+	if(cookies.token!=undefined&&str=="main"){
 	let data = JSON.parse(request(JSON.stringify({
 		"action": "get_user_info",
 		"data": {
@@ -28,6 +29,7 @@ function page(str){
 		}
 		toolbar += "</ul></div></div></div>";
 		user_data = data.data;
+	}
 	}
 	if(str=="login"){
 		document.getElementById("tzgp-app").innerHTML = "<br><div id=\"box\" class=\"mdui-shadow-5 mdui-center\"><br><h2 class=\"mdui-text-center\">登录到TzGamePanel</h2><br><div class=\"mdui-textfield mdui-textfield-floating-label\"><label class=\"mdui-textfield-label\" style=\"text-align: left\">用户名</label><input class=\"mdui-textfield-input\" type=\"text\" name=\"username\" id=\"login-username\" required><div class=\"mdui-textfield-error\">用户名不能为空</div></div><div class=\"mdui-textfield mdui-textfield-floating-label\"><label class=\"mdui-textfield-label\" style=\"text-align: left\">密码</label><input class=\"mdui-textfield-input\" type=\"password\" name=\"password\" id=\"login-password\" required><div class=\"mdui-textfield-error\">密码不能为空</div></div><br><button class=\"mdui-btn mdui-ripple mdui-float-right mdui-color-blue\" id=\"login-button\">登录</button><br><br><br></div>";
@@ -55,6 +57,31 @@ function page(str){
 		}
 	}
 	if(str=="nodes"){
+		change_cookie("page","nodes",5);
+		document.getElementById("tzgp-app").innerHTML += "<div id=\"box\" class=\"mdui-shadow-4\"><h2 class=\"mdui-text-center\">节点管理</h2><br>以下是已存在的节点：<div class=\"mdui-table-fluid\"><table class=\"mdui-table\"><thead><tr><th>节点名</th><th>节点地址</th><th>节点端口</th><th>状态</th><th>系统</th><th>内存</th><th>守护进程版本</th><th>操作</th></tr></thead><tbody id=\"list-nodes\"></tbody></table></div></div><div id=\"box\" class=\"mdui-shadow-4\"><h2 class=\"mdui-text-center\">添加节点</h2><div class=\"mdui-textfield mdui-textfield-floating-label\"><label class=\"mdui-textfield-label\">节点名（可重复）</label><input class=\"mdui-textfield-input\" type=\"text\" id=\"node-name\"></div><div class=\"mdui-textfield mdui-textfield-floating-label\"><label class=\"mdui-textfield-label\">地址</label><input class=\"mdui-textfield-input\" type=\"text\" id=\"node-host\"></div><div class=\"mdui-textfield mdui-textfield-floating-label\"><label class=\"mdui-textfield-label\">端口</label><input class=\"mdui-textfield-input\" type=\"number\" id=\"node-port\"></div><div class=\"mdui-textfield mdui-textfield-floating-label\"><label class=\"mdui-textfield-label\">密钥</label><input class=\"mdui-textfield-input\" type=\"text\" id=\"node-password\"></div><button class=\"mdui-btn mdui-float-right mdui-ripple mdui-color-blue\" onclick=\"add_node();\">添加</button><br><br></div>";
+		let nodes = get_nodes_list();
+		if(nodes!==false){
+			nodes_data = nodes;
+			for(let i in nodes){
+				let node_data = get_node_info(nodes[i].id);
+				let sys_type = "未知";
+				let memory = "未知";
+				let version = "未知";
+				let node_status = "离线";
+				if(node_data!=false){
+					sys_type = node_data.system.system;
+					memory = (node_data.system.used_memory/1024/1024/1024).toFixed(2)+"G/"+(node_data.system.total_memory/1024/1024/1024).toFixed(2)+"G";
+					version = node_data.version;
+					node_status = "在线";
+				}
+				document.getElementById("list-nodes").innerHTML += "<tr><td>"+nodes[i].name+"</td><td>"+nodes[i].host+"</td><td>"+nodes[i].port+"</td><td>"+node_status+"</td><td>"+sys_type+"</td><td>"+memory+"</td><td>"+version+"</td><td><button class=\"mdui-btn mdui-ripple mdui-color-blue mdui-shadow-4\">更改</button><br><button class=\"mdui-btn mdui-ripple mdui-color-red mdui-shadow-4\" onclick=\"delete_node_dialog('"+nodes[i].id+"');\">删除</button></td></tr>";
+			}
+		}else{
+			mdui.snackbar({
+				message: "获取节点列表失败",
+				position: "top"
+			});
+		}
 	}
 	mdui.mutation();
 }
@@ -208,9 +235,154 @@ function change_password(){
 		});
 	}
 }
-
+function get_nodes_list(){
+	let result = JSON.parse(request(JSON.stringify({
+		"action": "get_nodes_list",
+		"data": {
+			"token": cookies.token
+		}
+	})));
+	if(result.status==200){
+		return result.data;
+	}else{
+		return false;
+	}
+}
+function get_node_info(node_id){
+	let result = JSON.parse(request(JSON.stringify({
+		"action": "get_node_info",
+		"data": {
+			"token": cookies.token,
+			"node_id": node_id
+		}
+	})));
+	if(result.status==200){
+		return result.data;
+	}else{
+		return false;
+	}
+}
+function add_node(){
+	let node_name = document.getElementById("node-name").value;
+	let node_host = document.getElementById("node-host").value;
+	let node_port = parseInt(document.getElementById("node-port").value);
+	let node_password = document.getElementById("node-password").value;
+	if(node_name==""){
+		mdui.snackbar({
+			message:"节点名不能为空",
+			position:"top"
+		});
+		return;
+	}
+	if(node_host==""){
+		mdui.snackbar({
+			message:"地址不能为空",
+			position:"top"
+		});
+		return;
+	}
+	if(node_port==""){
+		mdui.snackbar({
+			message:"端口不能为空",
+			position:"top"
+		});
+		return;
+	}
+	if(node_password==""){
+		mdui.snackbar({
+			message:"密钥不能为空",
+			position:"top"
+		});
+		return;
+	}
+	let result = JSON.parse(request(JSON.stringify({
+		"action": "create_node",
+		"data": {
+			"token": cookies.token,
+			"name": node_name,
+			"host": node_host,
+			"port": node_port,
+			"password": node_password
+		}
+	})));
+	if(result.status==200){
+		mdui.snackbar({
+			message: "添加成功",
+			position: "top"
+		});
+		page("main");
+		page("nodes");
+	}else{
+		mdui.snackbar({
+			message: "添加失败："+result.msg,
+			position: "top"
+		});
+	}
+}
+dntmp = undefined;
+function delete_node_dialog(id){
+	let s = false;
+	let d = {};
+	for(let i in nodes_data){
+		if(nodes_data[i].id==id){
+			s = true;
+			d = nodes_data[i];
+			break;
+		}
+	}
+	if(s){
+		dntmp = d;
+		mdui.dialog({
+			title: "删除节点",
+			content: "你确定要删除节点"+d.name+"吗？<br>该节点上的实例都不会删除，所有已分配给用户的实例也都会取消分配",
+			buttons: [
+				{
+					text: "取消"
+				},
+				{
+					text: "确定",
+					onClick: function(inst){
+						delete_node(dntmp.id);
+						dntmp = undefined;
+					}
+				}
+			]
+		});
+	}else{
+		mdui.snackbar({
+			message: "找不到节点",
+			position: "top"
+		});
+	}
+}
+function delete_node(id){
+	let s = false;
+	let d = {};
+	for(let i in nodes_data){
+		if(nodes_data[i].id==id){
+			s = true;
+			d = nodes_data[i];
+			break;
+		}
+	}
+	if(s){
+		let result = JSON.parse(request(JSON.stringify({
+			action: "delete_node",
+			data: {
+				token: cookies.token,
+				node_id: id
+			}
+		})));
+	}else{
+		mdui.snackbar({
+			message: "找不到节点",
+			position: "top"
+		});
+	}
+}
 
 user_data = undefined;
+nodes_data = undefined;
 cookies = {};
 isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
 var device = navigator.userAgent.toLowerCase();

@@ -8,6 +8,7 @@ function ret(int $status,string $msg,$data=null){
 		"data" => $data,
 	)));
 }
+try{
 $status = false;
 foreach(getallheaders() as $key=>$value){
 	if($key=="Content-Type"&&str_replace("application/json","",$value)!=$value){
@@ -84,6 +85,60 @@ if($status){
 			ret(400,"更改密码失败：".$result);
 		}
 		break;
+	case "get_nodes_list":
+		if(!(isset($decode_data['data'])&&isset($decode_data['data']['token']))){
+			ret(400,"参数不全");
+		}
+		$data = get_user_from_token($decode_data['data']['token']);
+		if(!$data){
+			ret(404,"找不到用户");
+		}
+		if($data['permission']!=1){
+			ret(403,"没有权限");
+		}
+		$result = get_node_list();
+		ret(200,"成功",$result);
+		break;
+	case "get_node_info":
+		if(!(isset($decode_data['data'])&&isset($decode_data['data']['token'])&&isset($decode_data['data']['node_id']))){
+			ret(400,"参数不全");
+		}
+		$data = get_user_from_token($decode_data['data']['token']);
+		if(!$data){
+			ret(404,"找不到用户");
+		}
+		if($data['permission']!=1){
+			ret(403,"没有权限");
+		}
+		$result = get_node_info($decode_data['data']['node_id']);
+		if(!$result['status']){
+			ret(500,$result['msg']);
+		}
+		ret(200,"成功",$result['data']);
+		break;
+	case "create_node":
+		if(!(isset($decode_data['data'])&&isset($decode_data['data']['token'])&&isset($decode_data['data']['name'])&&isset($decode_data['data']['host'])&&isset($decode_data['data']['port'])&&isset($decode_data['data']['password']))){
+			ret(400,"参数不全");
+		}
+		$data = get_user_from_token($decode_data['data']['token']);
+		if(!$data){
+			ret(404,"找不到用户");
+		}
+		if($data['permission']!=1){
+			ret(403,"没有权限");
+		}
+		$decode_data['data']['port'] = (int)$decode_data['data']['port'];
+		if(!($decode_data['data']['port']>0&&$decode_data['data']['port']<65536)){
+			ret(400,"端口范围不对");
+		}
+		$result = create_node($decode_data['data']['name'],$decode_data['data']['host'],$decode_data['data']['port'],$decode_data['data']['password']);
+		if(!$result['status']){
+			ret(500,"节点已存在");
+		}
+		ret(200,"节点创建成功");
+		break;
+	case "delete_node":
+		break;
 	default:
 		ret(400,"无效的\"action\"");
 		break;
@@ -95,4 +150,7 @@ if($status){
 		"msg" => "请求头不正确",
 		"data" => null
 	)));
+}
+}catch(Throwable $e){
+	ret(502,"发生了错误：".$e->getMessage());
 }

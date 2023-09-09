@@ -1,5 +1,5 @@
 <?php
-/*基本函数*/
+require __DIR__.'/autoload.php';
 const TGP_DIR = __DIR__;
 $dirs = array(
 	"data",
@@ -212,7 +212,7 @@ function create_node(string $node_name,string $node_host,int $node_port,string $
 		"host" => $node_host,
 		"port" => $node_port,
 		"password" => $node_password,
-		"id" => md5(time().$node_name.$node_host.$node_port.$node_password);
+		"id" => md5(time().$node_name.$node_host.$node_port.$node_password)
 	);
 	mkdir(TGP_DIR."/data/nodes/".$node_data['id']);
 	file_write(TGP_DIR."/data/nodes/".$node_data['id']."/data.json",json_encode($node_data));
@@ -226,9 +226,61 @@ function get_node_list():array{
 	$nodes = array();
 	foreach($files as $i){
 		$text = json_decode(file_read($i),true);
-		$nodes = array_merge($nodes,array($i));
+		$nodes = array_merge($nodes,array($text));
 	}
 	return $nodes;
 }
-function get_node_status(string $node_id):array|bool{
+function check_node_exist($id):bool{
+	foreach(get_node_list() as $i){
+		if($i['id']==$id){
+			return true;
+		}
+	}
+	return false;
+}
+function get_node_info(string $node_id):array{
+	$node_data = array();
+	$status = false;
+	foreach(get_node_list() as $i){
+		if($i['id']==$node_id){
+			$node_data = $i;
+			$status = true;
+			break;
+		}
+	}
+	if(!$status){
+		return array(
+			"status" => false,
+			"msg" => "找不到节点"
+		);
+	}
+	$ws = new WebSocket\Client("ws://{$node_data['host']}:{$node_data['port']}/",array("timeout"=>30));
+	try{
+		$ws->text($node_data['password']);
+	}catch(Throwable $e){
+		return array(
+			"status" => false,
+			"msg" => "节点无法连接"
+		);
+	}
+	if($ws->receive()=="Fail"){
+		return array(
+			"status" => false,
+			"msg" => "节点验证失败"
+		);
+	}
+	$ws->text(json_encode(array(
+		"action" => "get_info"
+	)));
+	$data = json_decode($ws->receive(),true);
+	if($data==false){
+		return array(
+			"status" => false,
+			"msg" => "数据解析失败"
+		);
+	}
+	return array(
+		"status" => true,
+		"data" => $data['data']
+	);
 }

@@ -7,6 +7,7 @@ class TzGP{
 	public function Run(){
 		echo self::HEAD;
 		echo "<div id=\"tzgp-app\"></div>";
+		echo "<noscript>请启用JavaScript</noscript>";
 		echo "<script src=\"/mdui/js/mdui.min.js\"></script>";
 		echo "<script src=\"/app.js\"></script>";
 		echo self::FOOT;
