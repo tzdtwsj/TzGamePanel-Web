@@ -1,4 +1,5 @@
 <?php
+error_reporting(0);
 require '../func.php';
 function ret(int $status,string $msg,$data=null){
 	http_response_code($status);
@@ -138,6 +139,21 @@ if($status){
 		ret(200,"节点创建成功");
 		break;
 	case "delete_node":
+		if(!(isset($decode_data['data'])&&isset($decode_data['data']['token'])&&isset($decode_data['data']['node_id']))){
+			ret(400,"参数不全");
+		}
+		$data = get_user_from_token($decode_data['data']['token']);
+		if(!$data){
+			ret(404,"找不到用户");
+		}
+		if($data['permission']!=1){
+			ret(403,"没有权限");
+		}
+		$result = delete_node($decode_data['data']['node_id']);
+		if(!$result){
+			ret(404,"找不到节点");
+		}
+		ret(200,"删除节点成功");
 		break;
 	default:
 		ret(400,"无效的\"action\"");

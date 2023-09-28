@@ -3,6 +3,7 @@ echo "<!DOCTYPE html><html><head><link rel=\"stylesheet\" href=\"/mdui/css/mdui.
 echo "<div id=\"tzgp-app\"></div>";
 echo "<noscript>请启用JavaScript</noscript>";
 echo "<script src=\"/mdui/js/mdui.min.js\"></script>";
+echo "<script src=\"/libs/socket.io.min.js\"></script>";
 echo "<script src=\"/app.js\"></script>";
 echo "</body><br><br><center>Powered by TzGamePanel</center></html>";
 ?>

@@ -41,6 +41,19 @@ function get_env(string $name){
 		return null;
 	}
 }
+function sendrequest($url,$request_method="GET",$request_body="",$header=array("Content-Type: application/json;charset=utf-8")){
+	$curl = curl_init();
+	curl_setopt($curl,CURLOPT_URL,$url);
+	curl_setopt($curl,CURLOPT_TIMEOUT,1);
+	curl_setopt($curl,CURLOPT_HEADER,0);
+	curl_setopt($curl,CURLOPT_RETURNTRANSFER,1);
+	curl_setopt($curl,CURLOPT_POSTFIELDS,$request_body);
+	curl_setopt($curl, CURLOPT_HTTPHEADER,$header);
+	curl_setopt($curl,CURLOPT_CUSTOMREQUEST,$request_method);
+	$data = curl_exec($curl);
+	curl_close($curl);
+	return $data;
+}
 function login(string $username,string $password):string|bool{
 	if(!check_user_exist($username)){
 		return false;
@@ -238,6 +251,28 @@ function check_node_exist($id):bool{
 	}
 	return false;
 }
+function delete_node($id):bool{
+	if(!check_node_exist($id)){
+		return false;
+	}
+	$data = get_node($id);
+	foreach(glob(TGP_DIR."/data/nodes/".$data['id']."/*") as $i){
+		@unlink($i);
+	}
+	@rmdir(TGP_DIR."/data/nodes/".$data['id']);
+	return true;
+}
+function get_node($id):array|bool{
+	if(!check_node_exist($id)){
+		return false;
+	}
+	foreach(get_node_list() as $i){
+		if($i['id']==$id){
+			return $i;
+		}
+	}
+	return false;
+}
 function get_node_info(string $node_id):array{
 	$node_data = array();
 	$status = false;
@@ -254,29 +289,11 @@ function get_node_info(string $node_id):array{
 			"msg" => "找不到节点"
 		);
 	}
-	$ws = new WebSocket\Client("ws://{$node_data['host']}:{$node_data['port']}/",array("timeout"=>30));
-	try{
-		$ws->text($node_data['password']);
-	}catch(Throwable $e){
-		return array(
-			"status" => false,
-			"msg" => "节点无法连接"
-		);
-	}
-	if($ws->receive()=="Fail"){
-		return array(
-			"status" => false,
-			"msg" => "节点验证失败"
-		);
-	}
-	$ws->text(json_encode(array(
-		"action" => "get_info"
-	)));
-	$data = json_decode($ws->receive(),true);
+	$data = json_decode(sendrequest("http://".$node_data['host'].":".$node_data['port']."/get_info?token=".$node_data['password']),true);
 	if($data==false){
 		return array(
 			"status" => false,
-			"msg" => "数据解析失败"
+			"msg" => "获取数据失败"
 		);
 	}
 	return array(

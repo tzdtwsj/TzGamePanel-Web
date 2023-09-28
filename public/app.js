@@ -334,7 +334,7 @@ function delete_node_dialog(id){
 		dntmp = d;
 		mdui.dialog({
 			title: "删除节点",
-			content: "你确定要删除节点"+d.name+"吗？<br>该节点上的实例都不会删除，所有已分配给用户的实例也都会取消分配",
+			content: "你确定要删除节点"+d.name+"吗？<br>该节点上的实例都不会删除，但是所有已分配给用户的实例都会取消分配",
 			buttons: [
 				{
 					text: "取消"
@@ -373,6 +373,19 @@ function delete_node(id){
 				node_id: id
 			}
 		})));
+		if(result.status==200){
+			mdui.snackbar({
+				message: "删除成功",
+				position: "top"
+			});
+			page("main");
+			page("nodes");
+		}else{
+			mdui.snackbar({
+				message: "删除失败："+result.msg,
+				position: "top"
+			});
+		}
 	}else{
 		mdui.snackbar({
 			message: "找不到节点",
