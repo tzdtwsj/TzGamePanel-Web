@@ -28,7 +28,7 @@ foreach($tokens as $i){
 file_write(TGP_DIR."/data/tmp/tokens.json",json_encode($tokens2));
 unset($tokens);
 //自检语句结束
-//下发是核心函数
+//下方是核心函数
 function file_read(string $filename):string{
 	if(!file_exists($filename)){
 		throw new Exception("No such file or directory");
@@ -344,18 +344,37 @@ function get_node_info(string $node_id):array{
 	if(!$status){
 		return array(
 			"status" => false,
+			"code" => -1,
 			"msg" => "找不到节点"
 		);
 	}
-	$data = json_decode(sendrequest("http://".$node_data['host'].":".$node_data['port']."/get_info?token=".$node_data['password']),true);
+	$req = sendrequest("http://".$node_data['host'].":".$node_data['port']."/get_info?token=".$node_data['password']);
+	if($req==false){
+		return array(
+			"status" => false,
+			"code" => 1,
+			"msg" => "节点离线"
+		);
+	}
+	$data = json_decode($req,true);
 	if($data==false){
 		return array(
 			"status" => false,
-			"msg" => "获取数据失败"
+			"code" => 2,
+			"msg" => "解析节点回复的json数据失败"
+		);
+	}
+	if($data['status']!=200){
+		return array(
+			"status" => false,
+			"code" => 3,
+			"http_code" => $data['status'],
+			"msg" => $data['msg']
 		);
 	}
 	return array(
 		"status" => true,
+		"code" => 0,
 		"data" => $data['data']
 	);
 }

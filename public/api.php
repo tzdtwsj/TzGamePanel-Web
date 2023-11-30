@@ -204,7 +204,20 @@ if($status){
 		}
 		$result = get_node_info($decode_data['data']['node_id']);
 		if(!$result['status']){
-			ret(1,200,$result['msg']);
+			//$result['code']: -1_无此节点；0_成功；1_节点离线；2_解析数据失败；3_节点返回的status非200
+			switch($result['code']){
+			case -1:
+				ret(1,200,"找不到该节点");
+				break;
+			case 1:
+				ret(2,200,"节点离线");
+				break;
+			case 2:
+				ret(3,200,"解析数据失败，此节点可能不是由TzGamePanel Daemon驱动的");
+				break;
+			case 3:
+				ret(4,200,"节点返回了一个非200的返回值",array("code"=>$result['http_code'],"msg"=>$result['msg']));
+			}
 		}
 		ret(0,200,"成功",$result['data']);
 		break;

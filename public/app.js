@@ -80,11 +80,20 @@ function page(str){
 				let memory = "未知";
 				let version = "未知";
 				let node_status = "离线";
-				if(node_data!=false){
-					sys_type = node_data.system.system;
-					memory = (node_data.system.used_memory/1024/1024/1024).toFixed(2)+"G/"+(node_data.system.total_memory/1024/1024/1024).toFixed(2)+"G";
-					version = node_data.version;
+				if(node_data[0]==true){
+					sys_type = node_data[1].system.system;
+					memory = (node_data[1].system.used_memory/1024/1024/1024).toFixed(2)+"G/"+(node_data[1].system.total_memory/1024/1024/1024).toFixed(2)+"G";
+					version = node_data[1].version;
 					node_status = "在线";
+				}else if(node_data[1]!=null){
+					switch(node_data[1].code){
+						case 403:
+							node_status = "节点密钥错误";
+							break;
+						default:
+							node_status = "未知错误<button class=\"mdui-btn mdui-btn-icon\" mdui-tooltip=\"{content:'status: "+node_data[1].code+", msg: "+node_data[1].msg+"'}\"><i class=\"mdui-icon material-icons\">&#xe887;</i></button>";
+							break;
+					}
 				}
 				let tmp = parseInt(i)+1;
 				document.getElementById("list-nodes").innerHTML += "<tr><td><div type=\"mdui-textfield\"><input class=\"mdui-textfield-input node_name\" type=\"text\" placeholder=\"节点名\"></div></td><td><div type=\"mdui-textfield\"><input class=\"mdui-textfield-input node_host\" type=\"text\" placeholder=\"地址\"></div></td><td><div type=\"mdui-textfield\"><input class=\"mdui-textfield-input node_port\" type=\"number\" placeholder=\"端口\"></div></td><td><div type=\"mdui-textfield\"><input class=\"mdui-textfield-input node_password\" type=\"text\" placeholder=\"不更改请留空\"></div></td><td>"+node_status+"</td><td>"+sys_type+"</td><td>"+memory+"</td><td>"+version+"</td><td><button class=\"mdui-btn mdui-ripple mdui-color-blue mdui-shadow-4\" onclick=\"change_node('"+tmp+"','"+nodes[i].id+"');\">更改</button><br><button class=\"mdui-btn mdui-ripple mdui-color-red mdui-shadow-4\" onclick=\"delete_node_dialog('"+nodes[i].id+"');\">删除</button></td></tr>";
@@ -111,7 +120,7 @@ function page(str){
 		}
 	}
 	if(str=="instances"){
-		document.getElementById("tzgp-app").innerHTML += "<div id=\"box\" class=\"mdui-shadow-4\"><br>选择节点：<br><select class=\"mdui-select\" mdui-select id=\"nodes-list\" onchange=\"get_node_id_on_instances_page();\"></select></div><div id=\"box\" class=\"mdui-shadow-4\"><div class=\"mdui-table-fluid\"><table class=\"mdui-table\" id=\"instances-list\"></table></div></div><div id=\"box\" class=\"mdui-shadow-4\"><br>添加实例<br></div>";
+		document.getElementById("tzgp-app").innerHTML += "<div id=\"box\" class=\"mdui-shadow-4\"><br><h3>选择节点：</h3><br><select class=\"mdui-select\" mdui-select id=\"nodes-list\" onchange=\"get_node_id_on_instances_page();\"></select></div><div id=\"box\" class=\"mdui-shadow-4\"><div class=\"mdui-table-fluid\"><table class=\"mdui-table\" id=\"instances-list\"></table></div></div><div id=\"box\" class=\"mdui-shadow-4\"><br>创建实例<br></div>";
 		let nodes = get_nodes_list();
 		if(nodes!==false){
 			first_id = nodes[0].id;
@@ -298,9 +307,9 @@ function get_node_info(node_id){
 		}
 	})));
 	if(result.status===0){
-		return result.data;
+		return [true,result.data];
 	}else{
-		return false;
+		return [false,result.data];
 	}
 }
 function add_node(){
@@ -439,7 +448,7 @@ function get_node_id_on_instances_page(){
 	get_instances_on_instances_page(id);
 }
 function get_instances_on_instances_page(id){
-	document.getElementById("instances-list").innerHTML="<tr><th>实例名</th><th>实例id</th><th>状态</th><th>操作</th></tr>";
+	document.getElementById("instances-list").innerHTML="<tr><th>实例名</th><th>实例id</th><th>状态&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</th><th>操作</th></tr>";
 	let result = JSON.parse(request(JSON.stringify({
 		action: "get_instances",
 		data: {
@@ -449,11 +458,19 @@ function get_instances_on_instances_page(id){
 	})));
 	if(result.status===0){
 		for(let i in result.data){
-			document.getElementById("instances-list").innerHTML+="<tr><td>"+result.data[i].name+"</td><td>"+result.data[i].id+"</td><td></td><td></td></tr>";
+			let stat = "未知";
+			if(result.data[i].status == 0){
+				stat = "已停止";
+			}else if(result.data[i].status==1){
+				stat = "运行中";
+			}else if(result.data[i].status==2){
+				stat = "停止中";
+			}
+			document.getElementById("instances-list").innerHTML+="<tr><td>"+result.data[i].name+"</td><td>"+result.data[i].id+"</td><td>"+stat+"</td><td></td></tr>";
 		}
 	}else{
 		mdui.snackbar({
-			message: "获取该节点的实例列表失败，大概是此节点不在线",
+			message: "获取该节点的实例列表失败（节点离线）",
 			position: "top"
 		});
 		//document.getElementById("instances-list").innerHTML+="<div class=\"mdui-text-center\">没有数据</div>";
@@ -508,8 +525,13 @@ setInterval(function(){
 		location.assign("#login");//#login为默认位置
 		return;
 	}
-	if(url!=old_url){
-		old_url = url;
+	let param = url2.slice(url2.lastIndexOf("?")+1);
+	if(param==url2){
+		param = "";
+	}
+	let url3 = url2.split("?")[0];
+	if(url2!=old_url){
+		old_url = url2;
 	}else{
 		return;
 	}
@@ -536,12 +558,12 @@ setInterval(function(){
 			return;
 		}
 	}else{
-	    if(url2!="login"){
+	    if(url3!="login"){
 		    location.assign("#login");
 		    return;
 		}
 	}
-	switch(url2){
+	switch(url3){
 		case "":
 			location.assign("#login");
 			break;
@@ -554,7 +576,7 @@ setInterval(function(){
 			break;
 		default:
 			page("main");
-			page(url2);
+			page(url3);
 			break;
 	}
 },500);
