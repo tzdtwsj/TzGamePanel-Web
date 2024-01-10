@@ -10,7 +10,7 @@ function ret(int $status,int $http_code,string $msg,$data=null){
 	//500: 服务器内部错误，出现此情况请报告给开发者
 	
 	//status是结果状态码，一般是请求该方法时的返回结果
-	//所有方法中，0代表正常，其他值需要参阅该方法的具体返回结果，如果http_code不正确时，该参数会是-1
+	//所有方法中，0代表正常，其他值需要参阅该方法的具体返回结果，如果http_code不正确时，该值会是-1
 	http_response_code($http_code);
 	die(json_encode(array(
 		"http_code" => $http_code,
@@ -151,6 +151,8 @@ if($status){
 	if($decode_data['action']!=="login"){
 		if($user===null){
 			ret(-1,403,"鉴权失败：因为找不到token或apikey参数进行验证");
+		}elseif($user['permission']==-1){
+			ret(-1,403,"该账户已被封禁");
 		}
 	}
 	switch($decode_data['action']){
@@ -195,6 +197,9 @@ if($status){
 			ret(-1,403,"没有权限");
 		}
 		$result = get_node_list();
+		for($i=0;$i<count($result);$i=$i+1){
+			unset($result[$i]['password']);
+		}
 		ret(0,200,"成功",$result);
 		break;
 	case "get_node_info":
@@ -278,6 +283,97 @@ if($status){
 			ret(1,200,$result['msg']);
 		}
 		ret(0,200,"成功",$result['data']);
+		break;
+	case "get_instance":
+		check_params2(array(
+			"node_id" => array(
+				"type" => "string"
+			),
+			"instance_id" => array(
+				"type" => "string"
+			)
+		),$decode_data['data']);
+		if($user['permission']!=1){
+			$status = false;
+			foreach($user['instances'] as $i){
+				if($i['node_id']==$decode_data['data']['node_id']&&$i['instance_id']==$decode_data['data']['instance_id']){
+					$status = true;
+					break;
+				}
+			}
+			if(!$status){
+				ret(1,200,"无法获取实例");
+			}
+		}
+		$instances = get_instances($decode_data['data']['node_id']);
+		if(!$instances['status']){
+			ret(2,200,$instances['msg']);
+		}
+		foreach($instances['data'] as $i){
+			if($i['id']==$decode_data['data']['instance_id']){
+				unset($i["configs"]);
+				$node_data = get_node($decode_data['data']['node_id']);
+				$i['node_host'] = $node_data['host'].':'.$node_data['port'];
+				ret(0,200,"成功",$i);
+			}
+		}
+		ret(1,200,"无法获取实例");
+		break;
+	case "get_tmp_terminal_connect_token":
+		check_params2(array(
+			"node_id" => array(
+				"type" => "string"
+			),
+			"instance_id" => array(
+				"type" => "string"
+			)
+		),$decode_data['data']);
+		if($user['permission']!=1){
+			$status = false;
+			foreach($user['instances'] as $i){
+				if($i['node_id']==$decode_data['data']['node_id']&&$i['instance_id']==$decode_data['data']['instance_id']){
+					$status = true;
+					break;
+				}
+			}
+			if(!$status){
+				ret(1,200,"无法获取实例");
+			}
+		}
+		$data = get_tmp_terminal_connect_token($decode_data['data']['node_id'],$decode_data['data']['instance_id']);
+		if($data['status']){
+			ret(0,200,"成功",$data['data']);
+		}else{
+			ret(2,200,$data['msg']);
+		}
+		break;
+	case "exec_cmd":
+		check_params2(array(
+			"node_id" => array(
+				"type" => "string"
+			),
+			"instance_id" => array(
+				"type" => "string"
+			)
+		),$decode_data['data']);
+		if($user['permission']!=1){
+			$status = false;
+			foreach($user['instances'] as $i){
+				if($i['node_id']==$decode_data['data']['node_id']&&$i['instance_id']==$decode_data['data']['instance_id']){
+					$status = true;
+					break;
+				}
+			}
+			if(!$status){
+				ret(1,200,"无法获取实例");
+			}
+		}
+		$result = exec_cmd($decode_data['data']['node_id'],$decode_data['data']['instance_id'],$decode_data['data']['cmd']);
+		if($result['status']){
+			ret(0,200,"成功");
+		}else{
+			ret(2,200,$result['msg']);
+		}
 		break;
 	default:
 		ret(-1,404,"无效的\"action\"：找不到该方法");

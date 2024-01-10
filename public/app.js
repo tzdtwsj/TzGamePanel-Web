@@ -9,7 +9,7 @@ function request(str){
 window.onerror = function(message, source, lineno, colno, error){
 	mdui.dialog({
 		title: '发生了错误',
-		content: '发生了错误：'+message,
+		content: '发生了错误：'+message+"<br> at line "+lineno+", column "+colno,
 		buttons: [
 			{
 				text: "确认"
@@ -21,8 +21,7 @@ window.onerror = function(message, source, lineno, colno, error){
 		position: "top"
 	});
 }
-"<a onclick=\"page('main');page('nodes');\" mdui-drawer-close><li class=\"mdui-list-item mdui-ripple\">节点管理</li></a>";
-function page(str){
+function page(str,param=[]){
 	let toolbar = "<div class=\"mdui-appbar\"><div class=\"mdui-toolbar\"><button class=\"mdui-btn mdui-btn-icon mdui-ripple\" id=\"toolbar-open-drawer\" mdui-drawer=\"{target:'#toolbar-drawer'}\"><i class=\"mdui-icon material-icons\">menu</i></button><a href=\"#status\"><span class=\"mdui-typo-title\">TzGamePanel</span></a><div class=\"mdui-toolbar-spacer\"></div><button class=\"mdui-btn mdui-btn-icon mdui-ripple\" mdui-menu=\"{target:'#toolbar-menu'}\"><i class=\"mdui-icon material-icons\">account_circle</i></button><ul class=\"mdui-menu\" id=\"toolbar-menu\"><li class=\"mdui-menu-item\"><a class=\"mdui-ripple\" id=\"toolbar-menu-username\" href=\"#account\"></a></li><li class=\"mdui-divider\"></li><li class=\"mdui-menu-item\"><a class=\"mdui-ripple\" id=\"toolbar-menu-logout\" onclick=\"logout();\">登出</a></li></ul><div class=\"mdui-drawer\" id=\"toolbar-drawer\"><ul class=\"mdui-list\"><a href=\"#status\" mdui-drawer-close><li class=\"mdui-list-item mdui-ripple\">首页</li></a><a href=\"#my_instances\" mdui-drawer-close><li class=\"mdui-list-item mdui-ripple\">我的实例</li></a>";
 	if(cookies.token!=undefined&&str=="main"){
 	/*let data = JSON.parse(request(JSON.stringify({
@@ -114,7 +113,7 @@ function page(str){
 			}
 		}else{
 			mdui.snackbar({
-				message: "获取节点列表失败",
+				message: "错误：获取节点列表失败",
 				position: "top"
 			});
 		}
@@ -135,8 +134,147 @@ function page(str){
 			});
 		}
 	}
+	if(str=="instance"){
+		if(param.length<2){
+			mdui.snackbar({
+				message: "参数不完整",
+				position: "top"
+			});
+			mdui.mutation();
+			return;
+		}
+		/*let nodes = get_nodes_list();
+		if(nodes===false){
+			mdui.snackbar({
+				message: "错误：获取节点列表失败",
+				position: "top"
+			});
+			mdui.mutation();
+			return;
+		}
+		let stat = false;
+		for(let i in nodes){
+			if(nodes[i].id==param[0]){
+				stat = true;
+				break;
+			}
+		}
+		if(!stat){
+			mdui.snackbar({
+				message: "找不到此节点",
+				position: "top"
+			});
+			mdui.mutation();
+			return;
+		}*/
+		/*let instances = get_instances(param[0]);
+		if(instances===false){
+			mdui.snackbar({
+				message: "获取实例列表失败（节点离线）",
+				position: "top"
+			});
+			mdui.mutation();
+			return;
+		}
+		stat = false;
+		let inst = null;
+		for(let i in instances){
+			if(instances[i].id==param[1]){
+				stat = true;
+				inst = instances[i];
+				break;
+			}
+		}
+		if(!stat){
+			mdui.snackbar({
+				message: "找不到此实例",
+				position: "top"
+			});
+			mdui.mutation();
+			return;
+		}*/
+		let inst = get_instance(param[0],param[1]);
+		if(inst===false){
+			mdui.snackbar({
+				message: "获取实例失败",
+				position: "top"
+			});
+			mdui.mutation();
+			return;
+		}
+		let inst_status = "未知";
+		switch(inst.status){
+			case 0:
+				inst_status = "<span class=\"mdui-text-color-red\">已关闭</span>";
+				break;
+			case 1:
+				inst_status = "<span class=\"mdui-text-color-green\">运行中</span>";
+				break;
+			case 2:
+				inst_status = "<span class=\"mdui-text-color-yellow\">关闭中</span>";
+				break;
+		}
+		document.getElementById("tzgp-app").innerHTML += "<div id=\"box\" class=\"mdui-shadow-4\"><h3>实例名："+inst.name+"</h3><p id=\"inst-status\">实例当前状态："+inst_status+"</p></div><div id=\"box\" class=\"mdui-shadow-4\"><div class=\"mdui-typo-subheading\"><p><strong>实例操作：</strong></p></div><div class=\"mdui-text-center\"><button class=\"mdui-btn mdui-ripple mdui-color-green-50\" onclick=\"start_instance();\" style=\"width: 100%;border: 1px solid #A5D6A7;\">启动</button><br><br><button class=\"mdui-btn mdui-ripple\" onclick=\"stop_instance();\" style=\"width: 100%;border: 1px solid #BDBDBD;\">关闭</button><br><br><button class=\"mdui-btn mdui-ripple mdui-color-red-50\" onclick=\"kill_instance();\" style=\"width: 100%;border: 1px solid #FFCDD2;\">强制停止</button></div></div><div id=\"box\" class=\"mdui-shadow-4\"><div class=\"mdui-tab mdui-tab-scrollable\" mdui-tab><a class=\"mdui-ripple\" onclick=\"location.assign('#instance?"+param[0]+"&"+param[1]+"&console');\" id=\"inst-tab-console\">终端</a><a class=\"mdui-ripple\" onclick=\"location.assign('#instance?"+param[0]+"&"+param[1]+"&filemanager');\" id=\"inst-tab-filemanager\">文件管理</a><a class=\"mdui-ripple\" onclick=\"location.assign('#instance?"+param[0]+"&"+param[1]+"&settings');\" id=\"inst-tab-settings\">实例设置</a></div><div id=\"inst-content\"></div><div id=\"inst-tab-content\"></div></div>";
+		switch(param[2]){
+			case "filemanager":
+				document.getElementById("inst-tab-filemanager").classList.add("mdui-tab-active");
+				document.getElementById("inst-tab-filemanager").onclick = null;
+				document.getElementById("inst-tab-content").innerHTML = "文件管理（没写）";
+				break;
+			case "settings":
+				document.getElementById("inst-tab-settings").classList.add("mdui-tab-active");
+				document.getElementById("inst-tab-settings").onclick = null;
+				document.getElementById("inst-tab-content").innerHTML = "实例设置（没写）";
+				break;
+			default:
+				document.getElementById("inst-tab-console").classList.add("mdui-tab-active");
+				document.getElementById("inst-tab-console").onclick = null;
+				document.getElementById("inst-tab-content").innerHTML = "<div id=\"inst-terminal\"></div><div class=\"mdui-row\"><div class=\"mdui-textfield mdui-col-xs-9\"><input id=\"inst-terminal-input\" class=\"mdui-textfield-input\" type=\"text\" placeholder=\"在此输入命令\"></div><br><button class=\"mdui-btn mdui-ripple mdui-color-blue mdui-col-xs-3\" onclick=\"exec_cmd();\">执行命令</button></div>";
+				term.resize(Math.floor($(document.getElementById("inst-terminal")).width()/9),30);
+				term.open(document.getElementById("inst-terminal"));
+				let terminal_token = get_tmp_terminal_connect_token(param[0],param[1]);
+				if(terminal_token==false){
+					mdui.snackbar({
+						message: "获取终端连接密钥失败",
+						position: "top"
+					});
+					break;
+				}
+				if(ws==null){
+					ws = io("ws://"+inst.node_host+"/ws",{reconnection:false});
+					ws.on("terminal",function(msg){
+						term.write(decoder.decode(msg));
+						console.log(decoder.decode(msg));
+					});
+					ws.on("result",function(msg){
+						console.log(msg);
+					});
+					ws.on("instance-status",function(msg){
+						console.log(msg);
+						switch(msg){
+						case 0:
+							document.getElementById("inst-status").innerHTML = "实例当前状态：<span class=\"mdui-text-color-red\">已关闭</span>";
+							break;
+						case 1:
+							document.getElementById("inst-status").innerHTML = "实例当前状态：<span class=\"mdui-text-color-green\">运行中</span>";
+							break;
+						case 2:
+							document.getElementById("inst-status").innerHTML = "实例当前状态：<span class=\"mdui-text-color-yellow\">关闭中</span>";
+							break;
+						}
+					});
+					current_node_and_instance_id = [param[0],param[1]];
+					ws.emit("terminal",{token:terminal_token});
+				}
+				break;
+		}
+	}
 	mdui.mutation();
 }
+decoder = new TextDecoder('utf-8');
+term = new Terminal();
+ws = null;
+current_node_and_instance_id = [];
 function login(){
 	let username = document.getElementById("login-username").value;
 	let password = document.getElementById("login-password").value;
@@ -460,13 +598,13 @@ function get_instances_on_instances_page(id){
 		for(let i in result.data){
 			let stat = "未知";
 			if(result.data[i].status == 0){
-				stat = "已停止";
+				stat = "已关闭";
 			}else if(result.data[i].status==1){
 				stat = "运行中";
 			}else if(result.data[i].status==2){
-				stat = "停止中";
+				stat = "关闭中";
 			}
-			document.getElementById("instances-list").innerHTML+="<tr><td>"+result.data[i].name+"</td><td>"+result.data[i].id+"</td><td>"+stat+"</td><td></td></tr>";
+			document.getElementById("instances-list").innerHTML+="<tr><td>"+result.data[i].name+"</td><td>"+result.data[i].id+"</td><td>"+stat+"</td><td><a href=\"#instance?"+id+"&"+result.data[i].id+"\"><button class=\"mdui-btn mdui-ripple mdui-color-blue\">管理</button></a></td></tr>";
 		}
 	}else{
 		mdui.snackbar({
@@ -506,7 +644,96 @@ function change_node(num,node_id){
 		});
 	}
 }
+function get_instances(node_id){
+	let result = JSON.parse(request(JSON.stringify({
+		action: "get_instances",
+		data: {
+			token: cookies.token,
+			node_id: node_id
+		}
+	})));
+	if(result.status==0){
+		return result.data;
+	}else{
+		return false;
+	}
+}
+function get_instance(node_id,instance_id){
+	let result = JSON.parse(request(JSON.stringify({
+		action: "get_instance",
+		data: {
+			token: cookies.token,
+			node_id: node_id,
+			instance_id: instance_id
+		}
+	})));
+	if(result.status==0){
+		return result.data;
+	}else{
+		return false;
+	}
+}
+function get_tmp_terminal_connect_token(node_id,instance_id){
+	let result = JSON.parse(request(JSON.stringify({
+		action: "get_tmp_terminal_connect_token",
+		data: {
+			token: cookies.token,
+			node_id: node_id,
+			instance_id: instance_id
+		}
+	})));
+	if(result.status===0){
+		return result.data;
+	}else{
+		return false;
+	}
+}
+function exec_cmd(){
+	let cmd = document.getElementById("inst-terminal-input").value;
+	let result = JSON.parse(request(JSON.stringify({
+		action: "exec_cmd",
+		data: {
+			token: cookies.token,
+			node_id: current_node_and_instance_id[0],
+			instance_id: current_node_and_instance_id[1],
+			cmd: cmd
+		}
+	})));
+	if(result.status===0){
+		document.getElementById("inst-terminal-input").value = "";
+		return true;
+	}else{
+		mdui.snackbar({
+			message: result.msg,
+			position: "top"
+		});
+		return false;
+	}
+}
 
+setInterval(function(){
+	if(ws===null){
+		return;
+	}
+	if(!ws.connected){
+		mdui.snackbar({
+			message: "连接守护进程失败，重连中",
+			position: "top",
+			timeout: 1500
+		});
+		let terminal_token = get_tmp_terminal_connect_token(current_node_and_instance_id[0],current_node_and_instance_id[1]);
+		if(terminal_token==false){
+			mdui.snackbar({
+				message: "重连失败",
+				position: "top",
+				timeout: 1500
+			});
+			return;
+		}
+		ws.connect();
+		ws.emit("terminal",{token:terminal_token});
+	}
+},5000);
 user_data = undefined;
 nodes_data = undefined;
 cookies = {};
@@ -517,6 +744,7 @@ if(/ipad|iphone|midp|rv:1.2.3.4|ucweb|android|windows ce|windows mobile/.test(de
 	isPhone = true;
 }
 old_url = "";
+old_param = [];
 setInterval(function(){
     update_cookie();
 	let url = location.href;
@@ -527,15 +755,39 @@ setInterval(function(){
 	}
 	let param = url2.slice(url2.lastIndexOf("?")+1);
 	if(param==url2){
-		param = "";
+		param = [];
+	}else{
+		param = param.split("&");
+		let param2 = [];
+		for(let i in param){
+			if(param[i]!="mdui-dialog"){
+				param2[param2.length] = param[i];
+			}
+		}
+		param = param2;
 	}
 	let url3 = url2.split("?")[0];
-	if(url2!=old_url){
-		old_url = url2;
+	if(url3!=old_url){
+		old_url = url3;
+		old_param = param;
 	}else{
-		return;
+		if(old_param.length!=param.length){
+			old_param = param;
+		}else{
+			let stat = true;
+			for(let i in param){
+				if(param[i]!=old_param[i]){
+					stat = false;
+				}
+			}
+			if(stat){
+				return;
+			}else{
+				old_param = param;
+			}
+		}
 	}
-	console.log(url2);
+	console.log(url2+" "+param);
 	if(cookies.token!=undefined){
 		let data = JSON.parse(request(JSON.stringify({
 			"action": "get_user_info",
@@ -554,7 +806,7 @@ setInterval(function(){
 			oDate.setDate(oDate.getDate()-1);
 			document.cookie = "token=0; expires="+oDate.toGMTString();
 			update_cookie();
-			location.assign("#login")
+			location.assign("")//刷新
 			return;
 		}
 	}else{
@@ -562,6 +814,12 @@ setInterval(function(){
 		    location.assign("#login");
 		    return;
 		}
+	}
+	if(ws!=null&&url3!="instance"){
+		ws.disconnect();
+		ws = null;
+		term.reset();
+		current_node_and_instance_id = [];
 	}
 	switch(url3){
 		case "":
@@ -576,7 +834,7 @@ setInterval(function(){
 			break;
 		default:
 			page("main");
-			page(url3);
+			page(url3,param);
 			break;
 	}
 },500);

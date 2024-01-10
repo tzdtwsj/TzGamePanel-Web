@@ -438,3 +438,70 @@ function get_instances(string $node_id):array{
 		"data" => $data['data']
 	);
 }
+function get_tmp_terminal_connect_token(string $node_id,string $instance_id){
+	$node_data = array();
+	$status = false;
+	foreach(get_node_list() as $i){
+		if($i['id']==$node_id){
+			$node_data = $i;
+			$status = true;
+		}
+	}
+	if(!$status){
+		return array(
+			"status" => false,
+			"msg" => "找不到节点"
+		);
+	}
+	$data = json_decode(sendrequest("http://".$node_data['host'].":".$node_data['port']."/get_tmp_terminal_connect_token?token=".$node_data['password'],"POST",json_encode(array("instance_id"=>$instance_id))),true);
+	if($data==false){
+		return array(
+			"status" => false,
+			"msg" => "获取数据失败"
+		);
+	}
+	if($data['status']!==200){
+		return array(
+			"status" => false,
+			"msg" => $data['msg']
+		);
+	}else{
+		return array(
+			"status" => true,
+			"data" => $data['data']['token']
+		);
+	}
+}
+function exec_cmd(string $node_id,string $instance_id,string $cmd){
+	$node_data = array();
+	$status = false;
+	foreach(get_node_list() as $i){
+		if($i['id']==$node_id){
+			$node_data = $i;
+			$status = true;
+		}
+	}
+	if(!$status){
+		return array(
+			"status" => false,
+			"msg" => "找不到节点"
+		);
+	}
+	$data = json_decode(sendrequest("http://".$node_data['host'].":".$node_data['port']."/send_cmd_to_instance?token=".$node_data['password']."&instance_id=".$instance_id,"POST",json_encode(array("command"=>$cmd))),true);
+	if($data==false){
+		return array(
+			"status" => false,
+			"msg" => "获取数据失败"
+		);
+	}
+	if($data['status']===200){
+		return array(
+			"status" => true,
+		);
+	}else{
+		return array(
+			"status" => false,
+			"msg" => $data['msg']
+		);
+	}
+}
