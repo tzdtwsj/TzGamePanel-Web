@@ -202,6 +202,7 @@ function page(str,param=[]){
 			mdui.mutation();
 			return;
 		}
+		current_node_and_instance_id = [param[0],param[1]];
 		let inst_status = "未知";
 		switch(inst.status){
 			case 0:
@@ -219,7 +220,45 @@ function page(str,param=[]){
 			case "filemanager":
 				document.getElementById("inst-tab-filemanager").classList.add("mdui-tab-active");
 				document.getElementById("inst-tab-filemanager").onclick = null;
-				document.getElementById("inst-tab-content").innerHTML = "文件管理（没写）";
+				document.getElementById("inst-tab-content").innerHTML = "<div class=\"mdui-typo\" id=\"inst-filemanager-dir\"><code>/</code></div><br><div id=\"inst-filemanager-toparentdir\"><button class=\"mdui-btn mdui-color-grey mdui-text-color-white mdui-ripple\">返回至上一层目录</button></div><br><div class=\"mdui-table-fluid\"><table class=\"mdui-table\"><thead><tr><th></th><th>文件名</th><th>文件类型</th><th>文件大小</th><th>操作</th></tr></thead><tbody id=\"inst-filemanager-tbody\"></tbody></table></div>";
+				let directory = "";
+				if(param[3]!=undefined){
+					directory = param[3];
+					document.getElementById("inst-filemanager-dir").innerHTML = "<code>"+directory+"</code>";
+					let parent_dir = "";
+					let parent_dir2 = directory.split("/");
+					for(let i in parent_dir2){
+						if(parent_dir2[i]==""){
+							continue;
+						}
+						if(parent_dir2.length-1!=i){
+							parent_dir += "/"+parent_dir2[i];
+						}
+					}
+					if(directory!="/"){
+						if(parent_dir==""){
+							parent_dir = "/";
+						}
+						document.getElementById("inst-filemanager-toparentdir").innerHTML = "<a href=\"#instance?"+current_node_and_instance_id[0]+"&"+current_node_and_instance_id[1]+"&filemanager&"+parent_dir+"\"><button class=\"mdui-btn mdui-color-grey mdui-text-color-white mdui-ripple\">返回至上一层目录</button></a>";
+					}
+				}
+				let files_list = get_file_list(directory);
+				if(files_list===false){
+					mdui.snackbar({
+						message: "获取文件列表失败",
+						position: "top"
+					});
+					return;
+				}
+				files_list = rank_files(files_list);
+				for(let i in files_list){
+					if(files_list[i].type=="f"){
+						document.getElementById("inst-filemanager-tbody").innerHTML += "<tr><td><i class=\"mdui-icon material-icons\">&#xe24d;</i></td><td>"+files_list[i].name+"</td><td>文件</td><td>"+size_decode(files_list[i].size)+"</td><td></td></tr>";
+					}
+					if(files_list[i].type=="d"){
+						document.getElementById("inst-filemanager-tbody").innerHTML += "<tr><td><i class=\"mdui-icon material-icons\">&#xe2c7;</i></td><td><a href=\"#instance?"+current_node_and_instance_id[0]+"&"+current_node_and_instance_id[1]+"&filemanager&"+parse_dir(directory+"/"+files_list[i].name)+"\" class=\"mdui-text-color-black\">"+files_list[i].name+"</a></td><td>文件夹</td><td></td><td></td></tr>";
+					}
+				}
 				break;
 			case "settings":
 				document.getElementById("inst-tab-settings").classList.add("mdui-tab-active");
@@ -263,7 +302,7 @@ function page(str,param=[]){
 							break;
 						}
 					});
-					current_node_and_instance_id = [param[0],param[1]];
+					//current_node_and_instance_id = [param[0],param[1]];
 					ws.emit("terminal",{token:terminal_token});
 				}
 				break;
@@ -710,7 +749,152 @@ function exec_cmd(){
 		return false;
 	}
 }
-
+function start_instance(){
+	let result = JSON.parse(request(JSON.stringify({
+		action: "start_instance",
+		data: {
+			token: cookies.token,
+			node_id: current_node_and_instance_id[0],
+			instance_id: current_node_and_instance_id[1]
+		}
+	})));
+	if(result.status===0){
+		mdui.snackbar({
+			message: "启动实例成功",
+			position: "top"
+		});
+	}else{
+		mdui.snackbar({
+			message: result.msg,
+			position: "top"
+		});
+	}
+}
+function stop_instance(){
+	let result = JSON.parse(request(JSON.stringify({
+		action: "stop_instance",
+		data: {
+			token: cookies.token,
+			node_id: current_node_and_instance_id[0],
+			instance_id: current_node_and_instance_id[1]
+		}
+	})));
+	if(result.status!==0){
+		mdui.snackbar({
+			message: result.msg,
+			position: "top"
+		});
+	}
+}
+function kill_instance(){
+	mdui.dialog({
+		title: "警告",
+		content: "你确定要这么做吗？这可能会导致某些数据丢失",
+		buttons: [
+			{
+				text: "不"
+			},
+			{
+				text: "强制停止",
+				onClick: kill_instance_2
+			}
+		]
+	});
+}
+function kill_instance_2(){
+	let result = JSON.parse(request(JSON.stringify({
+		action: "kill_instance",
+		data: {
+			token: cookies.token,
+			node_id: current_node_and_instance_id[0],
+			instance_id: current_node_and_instance_id[1]
+		}
+	})));
+	if(result.status===0){
+		mdui.snackbar({
+			message: "强制停止实例成功",
+			position: "top"
+		});
+	}else{
+		mdui.snackbar({
+			message: result.msg,
+			position: "top"
+		});
+	}
+}
+function get_file_list(dir){
+	let result = JSON.parse(request(JSON.stringify({
+		action: "get_file_list",
+		data: {
+			token: cookies.token,
+			node_id: current_node_and_instance_id[0],
+			instance_id: current_node_and_instance_id[1],
+			directory: dir
+		}
+	})));
+	if(result.status===0){
+		return result.data;
+	}else{
+		return false;
+	}
+}
+function size_decode(size){
+	if(size>=1024){
+		size = (size/1024).toFixed(2);
+		if(size>=1024){
+			size = (size/1024).toFixed(2);
+			if(size>=1024){
+				size = (size/1024).toFixed(2);
+				return ""+size+"GiB";
+			}
+			return ""+size+"MiB";
+		}
+		return ""+size+"KiB";
+	}
+	return ""+size+"B";
+}
+function rank_files(files_list){
+	let name_list = [];
+	let files_list2 = [];
+	for(let i in files_list){
+		name_list[i] = files_list[i].name;
+	}
+	name_list.sort();
+	for(let i in name_list){
+		for(let j in files_list){
+			if(name_list[i]==files_list[j].name){
+				files_list2[i] = files_list[j];
+				continue;
+			}
+		}
+	}
+	let files_list3 = [];
+	for(let i in files_list2){
+		if(files_list2[i].type=="d"){
+			files_list3.push(files_list2[i]);
+		}
+	}
+	for(let i in files_list2){
+		if(files_list2[i].type=="f"){
+			files_list3.push(files_list2[i]);
+		}
+	}
+	return files_list3;
+}
+function parse_dir(dir){
+	let dir2 = dir.split("/");
+	let dir3 = "";
+	for(let i in dir2){
+		if(dir2[i]==""){
+			continue;
+		}
+		dir3 += "/"+dir2[i];
+	}
+	if(dir3==""){
+		dir3 = "/";
+	}
+	return dir3;
+}
 setInterval(function(){
 	if(ws===null){
 		return;
@@ -837,7 +1021,7 @@ setInterval(function(){
 			page(url3,param);
 			break;
 	}
-},500);
+},100);
 /*setTimeout(function(){
 	update_cookie();
 	if(cookies.token==undefined){

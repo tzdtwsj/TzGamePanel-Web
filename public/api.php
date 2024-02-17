@@ -115,6 +115,32 @@ function check_params2(array $r,array $d){
 		ret(-1,400,$cp['msg']);
 	}
 }
+function instance_check(){
+check_params2(array(
+			"node_id" => array(
+				"type" => "string"
+			),
+			"instance_id" => array(
+				"type" => "string"
+			)
+		),$GLOBALS['decode_data']['data']);
+	if($GLOBALS['user']['permission']!=1){
+		$status = false;
+		foreach($GLOBALS['user']['instances'] as $i){
+			if($i['node_id']==$GLOBALS['decode_data']['data']['node_id']&&$i['instance_id']==$GLOBALS['decode_data']['data']['instance_id']){
+				$status = true;
+				break;
+			}
+		}
+		if(!$status){
+			ret(1,200,"无法获取实例");
+		}
+	}
+	return array(
+		"node_id" => $GLOBALS['decode_data']['data']['node_id'],
+		"instance_id" => $GLOBALS['decode_data']['data']['instance_id']
+	);
+}
 try{
 $status = false;
 foreach(getallheaders() as $key=>$value){
@@ -354,6 +380,9 @@ if($status){
 			),
 			"instance_id" => array(
 				"type" => "string"
+			),
+			"cmd" => array(
+				"type" => "string"
 			)
 		),$decode_data['data']);
 		if($user['permission']!=1){
@@ -375,6 +404,101 @@ if($status){
 			ret(2,200,$result['msg']);
 		}
 		break;
+	case "start_instance":
+		check_params2(array(
+			"node_id" => array(
+				"type" => "string"
+			),
+			"instance_id" => array(
+				"type" => "string"
+			)
+		),$decode_data['data']);
+		if($user['permission']!=1){                                                                             $status = false;
+			foreach($user['instances'] as $i){
+				if($i['node_id']==$decode_data['data']['node_id']&&$i['instance_id']==$decode_data['data']['instance_id']){
+					$status = true;
+					break;
+				}
+			}
+			if(!$status){
+				ret(1,200,"无法获取实例");
+			}
+		}
+		$result = start_instance($decode_data['data']['node_id'],$decode_data['data']['instance_id']);
+		if($result['status']){
+			ret(0,200,"成功");
+		}else{
+			ret(2,200,$result['msg']);
+		}
+		break;
+	case "stop_instance":
+		check_params2(array(
+			"node_id" => array(
+				"type" => "string"
+			),
+			"instance_id" => array(
+				"type" => "string"
+			)
+		),$decode_data['data']);
+		if($user['permission']!=1){                                                                             $status = false;
+			foreach($user['instances'] as $i){
+				if($i['node_id']==$decode_data['data']['node_id']&&$i['instance_id']==$decode_data['data']['instance_id']){
+					$status = true;
+					break;
+				}
+			}
+			if(!$status){
+				ret(1,200,"无法获取实例");
+			}
+		}
+		$result = stop_instance($decode_data['data']['node_id'],$decode_data['data']['instance_id']);
+		if($result['status']){
+			ret(0,200,"成功");
+		}else{
+			ret(2,200,$result['msg']);
+		}
+		break;
+	case "kill_instance":
+		check_params2(array(
+			"node_id" => array(
+				"type" => "string"
+			),
+			"instance_id" => array(
+				"type" => "string"
+			)
+		),$decode_data['data']);
+		if($user['permission']!=1){
+			$status = false;
+			foreach($user['instances'] as $i){
+				if($i['node_id']==$decode_data['data']['node_id']&&$i['instance_id']==$decode_data['data']['instance_id']){
+					$status = true;
+					break;
+				}
+			}
+			if(!$status){
+				ret(1,200,"无法获取实例");
+			}
+		}
+		$result = kill_instance($decode_data['data']['node_id'],$decode_data['data']['instance_id']);
+		if($result['status']){
+			ret(0,200,"成功");
+		}else{
+			ret(2,200,$result['msg']);
+		}
+		break;
+	case "get_file_list":
+		$data = instance_check();
+		if(isset($decode_data['data']['directory'])){
+			$directory = $decode_data['data']['directory'];
+		}else{
+			$directory = "/";
+		}
+		$result = get_file_list($data['node_id'],$data['instance_id'],$directory);
+		if($result['status']){
+			ret(0,200,"成功",$result['data']);
+		}else{
+			ret(2,200,$result['msg']);
+		}
 	default:
 		ret(-1,404,"无效的\"action\"：找不到该方法");
 		break;

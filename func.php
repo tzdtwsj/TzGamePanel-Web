@@ -505,3 +505,136 @@ function exec_cmd(string $node_id,string $instance_id,string $cmd){
 		);
 	}
 }
+function start_instance(string $node_id, string $instance_id):array{
+	$node_data = array();
+	$status = false;
+	foreach(get_node_list() as $i){
+		if($i['id']==$node_id){
+			$node_data = $i;
+			$status = true;
+		}
+	}
+	if(!$status){
+		return array(
+			"status" => false,
+			"msg" => "找不到节点"
+		);
+	}
+	$data = json_decode(sendrequest("http://".$node_data['host'].":".$node_data['port']."/start_instance?token=".$node_data['password']."&instance_id=".$instance_id,"GET"),true);
+	if($data==false){
+		return array(
+			"status" => false,
+			"msg" => "节点离线"
+		);
+	}
+	if($data['status']===200){
+		return array(
+			"status" => true,
+		);
+	}else{
+		return array(
+			"status" => false,
+			"msg" => $data['msg']
+		);
+	}
+}
+function stop_instance(string $node_id, string $instance_id):array{
+	$node_data = array();
+	$status = false;
+	foreach(get_node_list() as $i){
+		if($i['id']==$node_id){
+			$node_data = $i;
+			$status = true;
+		}
+	}
+	if(!$status){
+		return array(
+			"status" => false,
+			"msg" => "找不到节点"
+		);
+	}
+	$data = json_decode(sendrequest("http://".$node_data['host'].":".$node_data['port']."/stop_instance?token=".$node_data['password']."&instance_id=".$instance_id,"GET"),true);
+	if($data==false){
+		return array(
+			"status" => false,
+			"msg" => "节点离线"
+		);
+	}
+	if($data['status']===200){
+		return array(
+			"status" => true,
+		);
+	}else{
+		return array(
+			"status" => false,
+			"msg" => $data['msg']
+		);
+	}
+}
+function kill_instance(string $node_id, string $instance_id):array{
+	$node_data = array();
+	$status = false;
+	foreach(get_node_list() as $i){
+		if($i['id']==$node_id){
+			$node_data = $i;
+			$status = true;
+		}
+	}
+	if(!$status){
+		return array(
+			"status" => false,
+			"msg" => "找不到节点"
+		);
+	}
+	$data = json_decode(sendrequest("http://".$node_data['host'].":".$node_data['port']."/kill_instance?token=".$node_data['password']."&instance_id=".$instance_id,"GET"),true);
+	if($data==false){
+		return array(
+			"status" => false,
+			"msg" => "节点离线"
+		);
+	}
+	if($data['status']===200){
+		return array(
+			"status" => true,
+		);
+	}else{
+		return array(
+			"status" => false,
+			"msg" => $data['msg']
+		);
+	}
+}
+function get_file_list(string $node_id,string $instance_id,string $directory="/"){
+	$node_data = array();
+	$status = false;
+	foreach(get_node_list() as $i){
+		if($i['id']==$node_id){
+			$node_data = $i;
+			$status = true;
+		}
+	}
+	if(!$status){
+		return array(
+			"status" => false,
+			"msg" => "找不到节点"
+		);
+	}
+	$data = json_decode(sendrequest("http://".$node_data['host'].":".$node_data['port']."/get_file_list?token=".$node_data['password']."&instance_id=".$instance_id."&directory=".$directory,"GET"),true);
+	if($data==false){
+		return array(
+			"status" => false,
+			"msg" => "节点离线"
+		);
+	}
+	if($data['status']===200){
+		return array(
+			"status" => true,
+			"data" => $data['data']
+		);
+	}else{
+		return array(
+			"status" => false,
+			"msg" => $data['msg']
+		);
+	}
+}
