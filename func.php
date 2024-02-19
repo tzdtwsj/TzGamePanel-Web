@@ -638,3 +638,37 @@ function get_file_list(string $node_id,string $instance_id,string $directory="/"
 		);
 	}
 }
+function get_last_log(string $node_id,string $instance_id,int $line=50){
+	$node_data = array();
+	$status = false;
+	foreach(get_node_list() as $i){
+		if($i['id']==$node_id){
+			$node_data = $i;
+			$status = true;
+		}
+	}
+	if(!$status){
+		return array(
+			"status" => false,
+			"msg" => "找不到节点"
+		);
+	}
+	$data = json_decode(sendrequest("http://".$node_data['host'].":".$node_data['port']."/get_last_log?token=".$node_data['password']."&instance_id=".$instance_id."&line=".$line,"GET"),true);
+	if($data==false){
+		return array(
+			"status" => false,
+			"msg" => "节点离线"
+		);
+	}
+	if($data['status']===200){
+		return array(
+			"status" => true,
+			"data" => $data['data']
+		);
+	}else{
+		return array(
+			"status" => false,
+			"msg" => $data['msg']
+		);
+	}
+}

@@ -220,7 +220,7 @@ function page(str,param=[]){
 			case "filemanager":
 				document.getElementById("inst-tab-filemanager").classList.add("mdui-tab-active");
 				document.getElementById("inst-tab-filemanager").onclick = null;
-				document.getElementById("inst-tab-content").innerHTML = "<div class=\"mdui-typo\" id=\"inst-filemanager-dir\"><code>/</code></div><br><div id=\"inst-filemanager-toparentdir\"><button class=\"mdui-btn mdui-color-grey mdui-text-color-white mdui-ripple\">返回至上一层目录</button></div><br><div class=\"mdui-table-fluid\"><table class=\"mdui-table\"><thead><tr><th></th><th>文件名</th><th>文件类型</th><th>文件大小</th><th>操作</th></tr></thead><tbody id=\"inst-filemanager-tbody\"></tbody></table></div>";
+				document.getElementById("inst-tab-content").innerHTML = "<div class=\"mdui-typo\" id=\"inst-filemanager-dir\"><code>/</code></div><br><div id=\"inst-filemanager-toparentdir\"><button class=\"mdui-btn mdui-color-grey mdui-text-color-white mdui-ripple\">返回至上一层目录</button></div><br><div class=\"mdui-table-fluid\"><table class=\"mdui-table\"><thead><tr><th></th><th>文件名</th><th>文件类型</th><th>文件大小</th><th>操&nbsp;&nbsp;&nbsp;&nbsp;作&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</th></tr></thead><tbody id=\"inst-filemanager-tbody\"></tbody></table></div>";
 				let directory = "";
 				if(param[3]!=undefined){
 					directory = param[3];
@@ -253,10 +253,10 @@ function page(str,param=[]){
 				files_list = rank_files(files_list);
 				for(let i in files_list){
 					if(files_list[i].type=="f"){
-						document.getElementById("inst-filemanager-tbody").innerHTML += "<tr><td><i class=\"mdui-icon material-icons\">&#xe24d;</i></td><td>"+files_list[i].name+"</td><td>文件</td><td>"+size_decode(files_list[i].size)+"</td><td></td></tr>";
+						document.getElementById("inst-filemanager-tbody").innerHTML += "<tr><td><i class=\"mdui-icon material-icons\">&#xe24d;</i></td><td>"+files_list[i].name+"</td><td>文件</td><td>"+size_decode(files_list[i].size)+"</td><td><button class=\"mdui-btn mdui-ripple mdui-color-green\">编辑</button>&nbsp;<button class=\"mdui-btn mdui-ripple mdui-color-green\">更多</button></td></tr>";
 					}
 					if(files_list[i].type=="d"){
-						document.getElementById("inst-filemanager-tbody").innerHTML += "<tr><td><i class=\"mdui-icon material-icons\">&#xe2c7;</i></td><td><a href=\"#instance?"+current_node_and_instance_id[0]+"&"+current_node_and_instance_id[1]+"&filemanager&"+parse_dir(directory+"/"+files_list[i].name)+"\" class=\"mdui-text-color-black\">"+files_list[i].name+"</a></td><td>文件夹</td><td></td><td></td></tr>";
+						document.getElementById("inst-filemanager-tbody").innerHTML += "<tr><td><i class=\"mdui-icon material-icons\">&#xe2c7;</i></td><td><a href=\"#instance?"+current_node_and_instance_id[0]+"&"+current_node_and_instance_id[1]+"&filemanager&"+parse_dir(directory+"/"+files_list[i].name)+"\" class=\"mdui-text-color-black\">"+files_list[i].name+"</a></td><td>文件夹</td><td></td><td><button class=\"mdui-btn mdui-ripple mdui-color-green\" disabled>编辑</button>&nbsp;<button class=\"mdui-btn mdui-ripple mdui-color-green\">更多</button></td></tr>";
 					}
 				}
 				break;
@@ -280,6 +280,16 @@ function page(str,param=[]){
 					break;
 				}
 				if(ws==null){
+					let last_log = get_last_log(50);
+					if(last_log!==false){
+						last_log = last_log.replace(/\n/g,"\r\n");
+						term.write(last_log);
+					}else{
+						mdui.snackbar({
+							message: "获取终端日志失败",
+							position: "top"
+						});
+					}
 					ws = io("ws://"+inst.node_host+"/ws",{reconnection:false});
 					ws.on("terminal",function(msg){
 						term.write(decoder.decode(msg));
@@ -447,7 +457,7 @@ function change_password(){
 			"new_password": new_password_1
 		}
 	})));
-	if(result.http_code==200){
+	if(result.status===0){
 		mdui.snackbar({
 			message: "更改密码成功",
 			position: "top"
@@ -895,6 +905,22 @@ function parse_dir(dir){
 	}
 	return dir3;
 }
+function get_last_log(line){
+	let result = JSON.parse(request(JSON.stringify({
+		action: "get_last_log",
+		data: {
+			token: cookies.token,
+			node_id: current_node_and_instance_id[0],
+			instance_id: current_node_and_instance_id[1],
+			line: line
+		}
+	})));
+	if(result.status===0){
+		return result.data;
+	}else{
+		return false;
+	}
+}
 setInterval(function(){
 	if(ws===null){
 		return;
@@ -915,6 +941,17 @@ setInterval(function(){
 			return;
 		}
 		ws.connect();
+		term.reset();
+		let last_log = get_last_log(50);
+		if(last_log!==false){
+			last_log = last_log.replace(/\n/g,"\r\n");
+			term.write(last_log);
+		}else{
+			mdui.snackbar({
+				message: "获取终端日志失败",
+				position: "top"
+			});
+		}
 		ws.emit("terminal",{token:terminal_token});
 	}
 },5000);
@@ -945,7 +982,7 @@ setInterval(function(){
 		let param2 = [];
 		for(let i in param){
 			if(param[i]!="mdui-dialog"){
-				param2[param2.length] = param[i];
+				param2[param2.length] = decodeURI(param[i]);
 			}
 		}
 		param = param2;

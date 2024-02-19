@@ -499,6 +499,21 @@ if($status){
 		}else{
 			ret(2,200,$result['msg']);
 		}
+		break;
+	case "get_last_log":
+		$data = instance_check();
+		if(isset($decode_data['data']['line'])){
+			$line = (int)$decode_data['data']['line'];
+		}else{
+			$line = 50;
+		}
+		$result = get_last_log($data['node_id'],$data['instance_id'],$line);
+		if($result['status']){
+			ret(0,200,"成功",$result['data']);
+		}else{
+			ret(2,200,$result['msg']);
+		}
+		break;
 	default:
 		ret(-1,404,"无效的\"action\"：找不到该方法");
 		break;
