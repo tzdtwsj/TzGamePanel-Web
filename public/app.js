@@ -1,10 +1,26 @@
-$ = mdui.$;
+"use strict";
+var $ = mdui.$;
 function request(str){
-	xml=new XMLHttpRequest();
+	let xml=new XMLHttpRequest();
 	xml.open("POST","/api.php",false);
 	xml.setRequestHeader("Content-Type","application/json");
 	xml.send(str);
 	return xml.responseText;
+}
+function request_async(str,is_200_func,isnot_200_func){
+	let xml = new XMLHttpRequest();
+	xml.onreadystatechange = function(){
+		if(xml.readyState==4){
+			if(xml.status==200){
+				is_200_func(xml);
+			}else{
+				isnot_200_func(xml);
+			}
+		}
+	}
+	xml.open("POST","/api.php",true);
+	xml.setRequestHeader("Content-Type","application/json");
+	xml.send(str);
 }
 window.onerror = function(message, source, lineno, colno, error){
 	mdui.dialog({
@@ -122,7 +138,7 @@ function page(str,param=[]){
 		document.getElementById("tzgp-app").innerHTML += "<div id=\"box\" class=\"mdui-shadow-4\"><br><h3>选择节点：</h3><br><select class=\"mdui-select\" mdui-select id=\"nodes-list\" onchange=\"get_node_id_on_instances_page();\"></select></div><div id=\"box\" class=\"mdui-shadow-4\"><div class=\"mdui-table-fluid\"><table class=\"mdui-table\" id=\"instances-list\"></table></div></div><div id=\"box\" class=\"mdui-shadow-4\"><br>创建实例<br></div>";
 		let nodes = get_nodes_list();
 		if(nodes!==false){
-			first_id = nodes[0].id;
+			let first_id = nodes[0].id;
 			for(let i in nodes){
 				document.getElementById("nodes-list").innerHTML += "<option value=\""+nodes[i].id+"\">"+nodes[i].name+"（"+nodes[i].host+":"+nodes[i].port+"）</option>";
 			}
@@ -220,10 +236,11 @@ function page(str,param=[]){
 			case "filemanager":
 				document.getElementById("inst-tab-filemanager").classList.add("mdui-tab-active");
 				document.getElementById("inst-tab-filemanager").onclick = null;
-				document.getElementById("inst-tab-content").innerHTML = "<div class=\"mdui-typo\" id=\"inst-filemanager-dir\"><code>/</code></div><br><div id=\"inst-filemanager-toparentdir\"><button class=\"mdui-btn mdui-color-grey mdui-text-color-white mdui-ripple\">返回至上一层目录</button></div><br><div class=\"mdui-table-fluid\"><table class=\"mdui-table\"><thead><tr><th></th><th>文件名</th><th>文件类型</th><th>文件大小</th><th>操&nbsp;&nbsp;&nbsp;&nbsp;作&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</th></tr></thead><tbody id=\"inst-filemanager-tbody\"></tbody></table></div>";
+				document.getElementById("inst-tab-content").innerHTML = "<div class=\"mdui-typo\" id=\"inst-filemanager-dir\"><code>/</code></div><br><span id=\"inst-filemanager-toparentdir\"><button class=\"mdui-btn mdui-color-grey mdui-text-color-white mdui-ripple\">返回至上一层目录</button></span>&nbsp;<input type=\"file\" id=\"inst-filemanager-upload\" style=\"display: none\" onchange=\"upload_file();\"><button class=\"mdui-btn mdui-color-yellow mdui-ripple\" onclick=\"upload_file_dialog();\">上传</button><br><div class=\"mdui-table-fluid\"><table class=\"mdui-table\"><thead><tr><th></th><th>文件名</th><th>文件类型</th><th>文件大小</th><th>操&nbsp;&nbsp;&nbsp;&nbsp;作&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</th></tr></thead><tbody id=\"inst-filemanager-tbody\"></tbody></table></div>";
 				let directory = "";
 				if(param[3]!=undefined){
 					directory = param[3];
+					tmp_dir = directory;
 					document.getElementById("inst-filemanager-dir").innerHTML = "<code>"+directory+"</code>";
 					let parent_dir = "";
 					let parent_dir2 = directory.split("/");
@@ -253,7 +270,7 @@ function page(str,param=[]){
 				files_list = rank_files(files_list);
 				for(let i in files_list){
 					if(files_list[i].type=="f"){
-						document.getElementById("inst-filemanager-tbody").innerHTML += "<tr><td><i class=\"mdui-icon material-icons\">&#xe24d;</i></td><td>"+files_list[i].name+"</td><td>文件</td><td>"+size_decode(files_list[i].size)+"</td><td><button class=\"mdui-btn mdui-ripple mdui-color-green\">编辑</button>&nbsp;<button class=\"mdui-btn mdui-ripple mdui-color-green\">更多</button></td></tr>";
+						document.getElementById("inst-filemanager-tbody").innerHTML += "<tr><td><i class=\"mdui-icon material-icons\">&#xe24d;</i></td><td>"+files_list[i].name+"</td><td>文件</td><td>"+size_decode(files_list[i].size)+"</td><td><button class=\"mdui-btn mdui-ripple mdui-color-green\">编辑</button>&nbsp;<button class=\"mdui-btn mdui-ripple mdui-color-green\" mdui-menu=\"{target:'#inst-filemanager-more-f_"+i+"'}\">更多</button><ul class=\"mdui-menu\" id=\"inst-filemanager-more-f_"+i+"\"><li class=\"mdui-menu-item\"><a href=\"javascript:download_file('"+directory+"/"+files_list[i].name+"');\" class=\"mdui-ripple\">下载</a></li></ul></td></tr>";
 					}
 					if(files_list[i].type=="d"){
 						document.getElementById("inst-filemanager-tbody").innerHTML += "<tr><td><i class=\"mdui-icon material-icons\">&#xe2c7;</i></td><td><a href=\"#instance?"+current_node_and_instance_id[0]+"&"+current_node_and_instance_id[1]+"&filemanager&"+parse_dir(directory+"/"+files_list[i].name)+"\" class=\"mdui-text-color-black\">"+files_list[i].name+"</a></td><td>文件夹</td><td></td><td><button class=\"mdui-btn mdui-ripple mdui-color-green\" disabled>编辑</button>&nbsp;<button class=\"mdui-btn mdui-ripple mdui-color-green\">更多</button></td></tr>";
@@ -320,10 +337,10 @@ function page(str,param=[]){
 	}
 	mdui.mutation();
 }
-decoder = new TextDecoder('utf-8');
-term = new Terminal();
-ws = null;
-current_node_and_instance_id = [];
+var decoder = new TextDecoder('utf-8');
+var term = new Terminal();
+var ws = null;
+var current_node_and_instance_id = [];
 function login(){
 	let username = document.getElementById("login-username").value;
 	let password = document.getElementById("login-password").value;
@@ -556,7 +573,7 @@ function add_node(){
 		});
 	}
 }
-dntmp = undefined;
+var dntmp = undefined;
 function delete_node_dialog(id){
 	let s = false;
 	let d = {};
@@ -921,6 +938,19 @@ function get_last_log(line){
 		return false;
 	}
 }
+function download_file(filepath){
+	let terminal_token = get_tmp_terminal_connect_token(current_node_and_instance_id[0],current_node_and_instance_id[1]);
+	let inst = get_instance(current_node_and_instance_id[0],current_node_and_instance_id[1])
+	location.href = "http://"+inst.node_host+"/download_file?terminal_token="+terminal_token+"&file="+filepath;
+}
+function upload_file_dialog(){
+	let upload_btn = document.getElementById("inst-filemanager-upload");
+	upload_btn.click();
+}
+var tmp_dir = undefined;
+function upload(){
+	6;
+}
 setInterval(function(){
 	if(ws===null){
 		return;
@@ -955,17 +985,17 @@ setInterval(function(){
 		ws.emit("terminal",{token:terminal_token});
 	}
 },5000);
-user_data = undefined;
-nodes_data = undefined;
-cookies = {};
-isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+var user_data = undefined;
+var nodes_data = undefined;
+var cookies = {};
+var isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
 var device = navigator.userAgent.toLowerCase();
 var isPhone = false;
 if(/ipad|iphone|midp|rv:1.2.3.4|ucweb|android|windows ce|windows mobile/.test(device)){
 	isPhone = true;
 }
-old_url = "";
-old_param = [];
+var old_url = "";
+var old_param = [];
 setInterval(function(){
     update_cookie();
 	let url = location.href;
