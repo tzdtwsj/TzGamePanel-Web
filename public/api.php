@@ -3,7 +3,7 @@
 require '../func.php';
 function ret(int $status,int $http_code,string $msg,$data=null){
 	//http_code是状态码，各状态码响应结果如下：
-	//200: 代表请求参数没有错误，具体结果还需要看status
+	//200: 代表请求参数没有错误，但并不代码结果正确，具体结果还需要看status
 	//400: 参数有问题或发送的json有问题
 	//403: 鉴权失败，一般是token错误或apikey错误
 	//404: 找不到该方法，一般是json中的action参数错误

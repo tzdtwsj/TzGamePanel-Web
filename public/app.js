@@ -1,5 +1,5 @@
 "use strict";
-var $ = mdui.$;
+//var $ = mdui.$;
 function request(str){
 	let xml=new XMLHttpRequest();
 	xml.open("POST","/api.php",false);
@@ -236,8 +236,9 @@ function page(str,param=[]){
 			case "filemanager":
 				document.getElementById("inst-tab-filemanager").classList.add("mdui-tab-active");
 				document.getElementById("inst-tab-filemanager").onclick = null;
-				document.getElementById("inst-tab-content").innerHTML = "<div class=\"mdui-typo\" id=\"inst-filemanager-dir\"><code>/</code></div><br><span id=\"inst-filemanager-toparentdir\"><button class=\"mdui-btn mdui-color-grey mdui-text-color-white mdui-ripple\">返回至上一层目录</button></span>&nbsp;<input type=\"file\" id=\"inst-filemanager-upload\" style=\"display: none\" onchange=\"upload_file();\"><button class=\"mdui-btn mdui-color-yellow mdui-ripple\" onclick=\"upload_file_dialog();\">上传</button><br><div class=\"mdui-table-fluid\"><table class=\"mdui-table\"><thead><tr><th></th><th>文件名</th><th>文件类型</th><th>文件大小</th><th>操&nbsp;&nbsp;&nbsp;&nbsp;作&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</th></tr></thead><tbody id=\"inst-filemanager-tbody\"></tbody></table></div>";
+				document.getElementById("inst-tab-content").innerHTML = "<div class=\"mdui-typo\" id=\"inst-filemanager-dir\"><code>/</code></div><br><span id=\"inst-filemanager-toparentdir\"><button class=\"mdui-btn mdui-color-grey mdui-text-color-white mdui-ripple\">返回至上一层目录</button></span>&nbsp;<input type=\"file\" id=\"inst-filemanager-upload\" style=\"display: none\" onchange=\"upload();\"><button class=\"mdui-btn mdui-color-yellow mdui-ripple\" onclick=\"upload_file_dialog();\">上传</button><br><div id=\"inst-filemanager-upload-progress\"></div><br><div class=\"mdui-table-fluid\"><table class=\"mdui-table\"><thead><tr><th></th><th>文件名</th><th>文件类型</th><th>文件大小</th><th>操&nbsp;&nbsp;&nbsp;&nbsp;作&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</th></tr></thead><tbody id=\"inst-filemanager-tbody\"></tbody></table></div>";
 				let directory = "";
+				tmp_dir = directory;
 				if(param[3]!=undefined){
 					directory = param[3];
 					tmp_dir = directory;
@@ -944,12 +945,91 @@ function download_file(filepath){
 	location.href = "http://"+inst.node_host+"/download_file?terminal_token="+terminal_token+"&file="+filepath;
 }
 function upload_file_dialog(){
+	if(uploading){
+		mdui.snackbar({
+			message: "请等待当前上传文件事件完成",
+			position: "top"
+		});
+		return;
+	}
 	let upload_btn = document.getElementById("inst-filemanager-upload");
 	upload_btn.click();
 }
 var tmp_dir = undefined;
+var uploading = false;
+var uploading_node_and_instance_id = undefined;
 function upload(){
-	6;
+	let upload_btn = document.getElementById("inst-filemanager-upload");
+	if(upload_btn.files[0]==null){
+		return;
+	}
+	let formdata = new FormData();
+	formdata.set("file",upload_btn.files[0]);
+	let xhr = new XMLHttpRequest();
+	let inst = get_instance(current_node_and_instance_id[0],current_node_and_instance_id[1]);
+	let terminal_token = get_tmp_terminal_connect_token(current_node_and_instance_id[0],current_node_and_instance_id[1]);
+	xhr.open("POST","http://"+inst.node_host+"/upload_file?terminal_token="+terminal_token+"&filename="+tmp_dir+"/"+upload_btn.files[0].name,true);
+	xhr.upload.onprogress = function(e){
+		if(e.lengthComputable){
+			let percentComplete = parseInt((e.loaded / e.total) * 100);
+			let prog = document.getElementById('inst-filemanager-upload-progress');
+			if(prog!=null){
+				if(uploading_node_and_instance_id == (current_node_and_instance_id[0]+" "+current_node_and_instance_id[1]) ){
+					prog.innerHTML = "<div class=\"mdui-progress\"><div class=\"mdui-progress-determinate\" style=\"width: "+percentComplete+"%;\"></div></div>"+percentComplete+"%";
+				}
+			}
+		}
+	};
+	xhr.onload = function (e) {
+		let prog = document.getElementById('inst-filemanager-upload-progress');
+		if(prog!=null){
+			prog.innerHTML = "";
+			mdui.mutation();
+		}
+		uploading = false;
+		uploading_node_and_instance_id = undefined;
+		if (xhr.status === 200) {
+			mdui.snackbar({
+				message: "上传文件成功，请刷新",
+				position: "top"
+			});
+		} else {
+			mdui.dialog({
+				title: "提示",
+				content: "上传失败："+JSON.parse(xhr.responseText).msg,
+				buttons: [
+					{
+						text: "确定"
+					}
+				]
+			});
+		}
+	};
+	xhr.upload.onerror = function(e){
+		console.log(e);
+	};
+	uploading = true;
+	uploading_node_and_instance_id = current_node_and_instance_id[0]+" "+current_node_and_instance_id[1];
+	xhr.send(/*formdata*/);
+	/*$.ajax({
+		url: "http://"+inst.node_host+"/upload_file?terminal_token="+terminal_token+"&filename="+tmp_dir+"/"+upload_btn.files[0].name,
+		type: "POST",
+		dataType: "json",
+		contentType: false,
+		async: true,
+		xhrFields: {
+			upload
+		}
+	});*/
+}
+function upload2(){
+	let upload_btn = document.getElementById("inst-filemanager-upload");
+	let inst = get_instance(current_node_and_instance_id[0],current_node_and_instance_id[1])
+	let formData = new FormData();
+	formData.append("file",upload_btn.files[0]);
+	let xhr = XMLHttpRequest();
+	xhr.open("POST","http://"+inst.node_host+"/upload_file?terminal_token="+terminal_token+"&filename=test",true);
+	xhr.send(formData);
 }
 setInterval(function(){
 	if(ws===null){
