@@ -1,5 +1,5 @@
 <?php
-require __DIR__.'/autoload.php';
+//require __DIR__.'/autoload.php';
 //下方是自检语句，每引用一次本文件将会执行一次
 const TGP_DIR = __DIR__;
 $dirs = array(
