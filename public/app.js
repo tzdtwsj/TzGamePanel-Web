@@ -112,11 +112,6 @@ function page(str,param=[]){
 				}
 				let tmp = parseInt(i)+1;
 				document.getElementById("list-nodes").innerHTML += "<tr><td><div type=\"mdui-textfield\"><input class=\"mdui-textfield-input node_name\" type=\"text\" placeholder=\"节点名\"></div></td><td><div type=\"mdui-textfield\"><input class=\"mdui-textfield-input node_host\" type=\"text\" placeholder=\"地址\"></div></td><td><div type=\"mdui-textfield\"><input class=\"mdui-textfield-input node_port\" type=\"number\" placeholder=\"端口\"></div></td><td><div type=\"mdui-textfield\"><input class=\"mdui-textfield-input node_password\" type=\"text\" placeholder=\"不更改请留空\"></div></td><td>"+node_status+"</td><td>"+sys_type+"</td><td>"+memory+"</td><td>"+version+"</td><td><button class=\"mdui-btn mdui-ripple mdui-color-blue mdui-shadow-4\" onclick=\"change_node('"+tmp+"','"+nodes[i].id+"');\">更改</button><br><button class=\"mdui-btn mdui-ripple mdui-color-red mdui-shadow-4\" onclick=\"delete_node_dialog('"+nodes[i].id+"');\">删除</button></td></tr>";
-				/*let j = document.getElementsByClassName("");
-				let k = j.getElementsByTagName("input");
-				k[0].value = nodes[i].name;
-				k[1].value = nodes[i].host;
-				k[2].value = nodes[i].port;*/
 			}
 			let node_name = document.getElementsByClassName("node_name");
 			let node_host = document.getElementsByClassName("node_host");
@@ -138,11 +133,18 @@ function page(str,param=[]){
 		document.getElementById("tzgp-app").innerHTML += "<div id=\"box\" class=\"mdui-shadow-4\"><br><h3>选择节点：</h3><br><select class=\"mdui-select\" mdui-select id=\"nodes-list\" onchange=\"get_node_id_on_instances_page();\"></select></div><div id=\"box\" class=\"mdui-shadow-4\"><div class=\"mdui-table-fluid\"><table class=\"mdui-table\" id=\"instances-list\"></table></div></div><div id=\"box\" class=\"mdui-shadow-4\"><br>创建实例<br></div>";
 		let nodes = get_nodes_list();
 		if(nodes!==false){
-			let first_id = nodes[0].id;
-			for(let i in nodes){
-				document.getElementById("nodes-list").innerHTML += "<option value=\""+nodes[i].id+"\">"+nodes[i].name+"（"+nodes[i].host+":"+nodes[i].port+"）</option>";
+			if(nodes.length==0){
+				mdui.snackbar({
+					message: "你还没有节点，请先添加！",
+					position: "top"
+				});
+			}else{
+				let first_id = nodes[0].id;
+				for(let i in nodes){
+					document.getElementById("nodes-list").innerHTML += "<option value=\""+nodes[i].id+"\">"+nodes[i].name+"（"+nodes[i].host+":"+nodes[i].port+"）</option>";
+				}
+				get_instances_on_instances_page(first_id);
 			}
-			get_instances_on_instances_page(first_id);
 		}else{
 			mdui.snackbar({
 				message: "错误：获取节点列表失败",
@@ -159,56 +161,6 @@ function page(str,param=[]){
 			mdui.mutation();
 			return;
 		}
-		/*let nodes = get_nodes_list();
-		if(nodes===false){
-			mdui.snackbar({
-				message: "错误：获取节点列表失败",
-				position: "top"
-			});
-			mdui.mutation();
-			return;
-		}
-		let stat = false;
-		for(let i in nodes){
-			if(nodes[i].id==param[0]){
-				stat = true;
-				break;
-			}
-		}
-		if(!stat){
-			mdui.snackbar({
-				message: "找不到此节点",
-				position: "top"
-			});
-			mdui.mutation();
-			return;
-		}*/
-		/*let instances = get_instances(param[0]);
-		if(instances===false){
-			mdui.snackbar({
-				message: "获取实例列表失败（节点离线）",
-				position: "top"
-			});
-			mdui.mutation();
-			return;
-		}
-		stat = false;
-		let inst = null;
-		for(let i in instances){
-			if(instances[i].id==param[1]){
-				stat = true;
-				inst = instances[i];
-				break;
-			}
-		}
-		if(!stat){
-			mdui.snackbar({
-				message: "找不到此实例",
-				position: "top"
-			});
-			mdui.mutation();
-			return;
-		}*/
 		let inst = get_instance(param[0],param[1]);
 		if(inst===false){
 			mdui.snackbar({
@@ -236,7 +188,7 @@ function page(str,param=[]){
 			case "filemanager":
 				document.getElementById("inst-tab-filemanager").classList.add("mdui-tab-active");
 				document.getElementById("inst-tab-filemanager").onclick = null;
-				document.getElementById("inst-tab-content").innerHTML = "<div class=\"mdui-typo\" id=\"inst-filemanager-dir\"><code>/</code></div><br><span id=\"inst-filemanager-toparentdir\"><button class=\"mdui-btn mdui-color-grey mdui-text-color-white mdui-ripple\">返回至上一层目录</button></span>&nbsp;<input type=\"file\" id=\"inst-filemanager-upload\" style=\"display: none\" onchange=\"upload();\"><button class=\"mdui-btn mdui-color-yellow mdui-ripple\" onclick=\"upload_file_dialog();\">上传</button><br><div id=\"inst-filemanager-upload-progress\"></div><br><div class=\"mdui-table-fluid\"><table class=\"mdui-table\"><thead><tr><th></th><th>文件名</th><th>文件类型</th><th>文件大小</th><th>操&nbsp;&nbsp;&nbsp;&nbsp;作&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</th></tr></thead><tbody id=\"inst-filemanager-tbody\"></tbody></table></div>";
+				document.getElementById("inst-tab-content").innerHTML = "<div class=\"mdui-typo\" id=\"inst-filemanager-dir\"><code>/</code></div><br><span id=\"inst-filemanager-toparentdir\"><button class=\"mdui-btn mdui-color-grey mdui-text-color-white mdui-ripple\">返回至上一层目录</button></span>&nbsp;<input type=\"file\" id=\"inst-filemanager-upload\" style=\"display: none\" onchange=\"upload();\"><button class=\"mdui-btn mdui-color-yellow mdui-ripple\" onclick=\"upload_file_dialog();\">上传</button>&nbsp;<button class=\"mdui-btn mdui-color-yellow mdui-ripple\" onclick=\"filemanager_refetch();\">刷新</button><br><div id=\"inst-filemanager-upload-progress\"></div><br><div class=\"mdui-table-fluid\"><table class=\"mdui-table\"><thead><tr><th></th><th>文件名</th><th>文件类型</th><th>文件大小</th><th>操&nbsp;&nbsp;&nbsp;&nbsp;作&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</th></tr></thead><tbody id=\"inst-filemanager-tbody\"></tbody></table></div>";
 				let directory = "";
 				tmp_dir = directory;
 				if(param[3]!=undefined){
@@ -352,7 +304,7 @@ function login(){
 			"password": password
 		}
 	})));
-	if(response.http_code==200){
+	if(response.status==0){
 		mdui.snackbar({
 			message: "登录成功",
 			position: "top"
@@ -370,6 +322,16 @@ function login(){
 		user_data = data.data;
 		location.assign("#status")
 		return true;
+	}else if(response.status==1){
+		mdui.dialog({
+			title: "Info",
+			content: "当前没有用户，已自动创建管理用户<br>用户名: "+response.data.username+"<br>密码: "+response.data.password+"<br>如果忘记了用户名或密码，可以打开面板网页端目录的default_user.txt",
+			buttons: [
+				{
+					text: "确认"
+				}
+			]
+		});
 	}else{
 		mdui.snackbar({
 			message: response.msg,
@@ -969,7 +931,8 @@ function upload(){
 	let inst = get_instance(current_node_and_instance_id[0],current_node_and_instance_id[1]);
 	let terminal_token = get_tmp_terminal_connect_token(current_node_and_instance_id[0],current_node_and_instance_id[1]);
 	xhr.open("POST","http://"+inst.node_host+"/upload_file?terminal_token="+terminal_token+"&filename="+tmp_dir+"/"+upload_btn.files[0].name,true);
-	xhr.upload.onprogress = function(e){
+	//因技术原因，无法获取实时上传进度条
+	/*xhr.upload.onprogress = function(e){
 		if(e.lengthComputable){
 			let percentComplete = parseInt((e.loaded / e.total) * 100);
 			let prog = document.getElementById('inst-filemanager-upload-progress');
@@ -979,7 +942,7 @@ function upload(){
 				}
 			}
 		}
-	};
+	};*/
 	xhr.onload = function (e) {
 		let prog = document.getElementById('inst-filemanager-upload-progress');
 		if(prog!=null){
@@ -1005,31 +968,32 @@ function upload(){
 			});
 		}
 	};
-	xhr.upload.onerror = function(e){
+	/*xhr.upload.onerror = function(e){
 		console.log(e);
-	};
+	};*/
 	uploading = true;
 	uploading_node_and_instance_id = current_node_and_instance_id[0]+" "+current_node_and_instance_id[1];
-	xhr.send(/*formdata*/);
-	/*$.ajax({
-		url: "http://"+inst.node_host+"/upload_file?terminal_token="+terminal_token+"&filename="+tmp_dir+"/"+upload_btn.files[0].name,
-		type: "POST",
-		dataType: "json",
-		contentType: false,
-		async: true,
-		xhrFields: {
-			upload
-		}
-	});*/
+	xhr.send(formdata);
 }
-function upload2(){
-	let upload_btn = document.getElementById("inst-filemanager-upload");
-	let inst = get_instance(current_node_and_instance_id[0],current_node_and_instance_id[1])
-	let formData = new FormData();
-	formData.append("file",upload_btn.files[0]);
-	let xhr = XMLHttpRequest();
-	xhr.open("POST","http://"+inst.node_host+"/upload_file?terminal_token="+terminal_token+"&filename=test",true);
-	xhr.send(formData);
+function filemanager_refetch(){
+	document.getElementById("inst-filemanager-tbody").innerHTML = "";
+	let files_list = get_file_list(tmp_dir);
+	if(files_list===false){
+		mdui.snackbar({
+			message: "获取文件列表失败",
+			position: "top"
+		});
+		return;
+	}
+	files_list = rank_files(files_list);
+	for(let i in files_list){
+		if(files_list[i].type=="f"){
+			document.getElementById("inst-filemanager-tbody").innerHTML += "<tr><td><i class=\"mdui-icon material-icons\">&#xe24d;</i></td><td>"+files_list[i].name+"</td><td>文件</td><td>"+size_decode(files_list[i].size)+"</td><td><button class=\"mdui-btn mdui-ripple mdui-color-green\">编辑</button>&nbsp;<button class=\"mdui-btn mdui-ripple mdui-color-green\" mdui-menu=\"{target:'#inst-filemanager-more-f_"+i+"'}\">更多</button><ul class=\"mdui-menu\" id=\"inst-filemanager-more-f_"+i+"\"><li class=\"mdui-menu-item\"><a href=\"javascript:download_file('"+tmp_dir+"/"+files_list[i].name+"');\" class=\"mdui-ripple\">下载</a></li></ul></td></tr>";
+		}
+		if(files_list[i].type=="d"){
+			document.getElementById("inst-filemanager-tbody").innerHTML += "<tr><td><i class=\"mdui-icon material-icons\">&#xe2c7;</i></td><td><a href=\"#instance?"+current_node_and_instance_id[0]+"&"+current_node_and_instance_id[1]+"&filemanager&"+parse_dir(tmp_dir+"/"+files_list[i].name)+"\" class=\"mdui-text-color-black\">"+files_list[i].name+"</a></td><td>文件夹</td><td></td><td><button class=\"mdui-btn mdui-ripple mdui-color-green\" disabled>编辑</button>&nbsp;<button class=\"mdui-btn mdui-ripple mdui-color-green\">更多</button></td></tr>";
+		}
+	}
 }
 setInterval(function(){
 	if(ws===null){

@@ -191,8 +191,14 @@ if($status){
 				"type" => "string"
 			)
 		),$decode_data['data']);
+		if(count(get_user_list())==0){
+			$password = md5((string)time()."TzGamePanel.Password");
+			create_user("admin.".substr($password,0,6),$password,1);
+			file_write(TGP_DIR."/default_user.txt","Username: "."admin.".substr($password,0,6)."\r\nPassword: ".$password);
+			ret(1,200,"没有用户，已自动创建新用户",array("username"=>"admin.".substr($password,0,6),"password"=>$password));
+		}
 		$data = login($decode_data['data']['username'],$decode_data['data']['password']);
-		if(!$data){
+		if($data==false){
 			ret(-1,403,"登录失败：用户名或密码错误");
 		}else{
 			ret(0,200,"登录成功",array("token"=>$data));

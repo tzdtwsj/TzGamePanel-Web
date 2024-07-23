@@ -78,8 +78,9 @@ function login(string $username,string $password):string|bool{
 	}
 	$data = get_user($username);
 	if($data['password']==md5($password)){
+		$token = gen_token($username);
 		update_user($username,array("last_login_time"=>time()));
-		return gen_token($username);
+		return $token;
 	}else{
 		return false;
 	}
@@ -105,8 +106,8 @@ function create_user(string $username,string $password,int $permission=0):array{
 		"password" => md5($password),
 		"id" => $user_id,
 		"create_time" => time(),
-		"last_login_time" => null,
-		"permission" => 0,
+		"last_login_time" => 0,
+		"permission" => $permission,
 		"instances" => array(),
 		"apikey" => null,
 	)));
@@ -175,14 +176,12 @@ function get_user_list():array{
 	return $list;
 }
 function check_user_exist(string $username):bool{
-	$status = false;
 	foreach(get_user_list() as $i){
 		if($i['username']==$username){
-			$status = true;
-			break;
+			return true;
 		}
 	}
-	return $status;
+	return false;
 }
 function update_user(string $username,array $content){
 	if(!check_user_exist($username)){
@@ -225,7 +224,7 @@ function close_api_key(string $username):bool{
 	return true;
 }
 function check_password(string $password):string{
-    $pattern1='/[A-Z]/';
+    $pattern1='/[A-Za-z]/';
     $pattern2='/[a-z]/';
     $pattern3='/[0-9]/';
     $pattern4='/[_.\-#$%]/';
@@ -234,11 +233,11 @@ function check_password(string $password):string{
         $result .= "需要至少包含8个字符 ";
     }
     if(!preg_match($pattern1,$password)) {
-        $result .= "需要至少一个大写字母 ";
+        $result .= "需要至少一个大小写字母 ";
     }
-    if(!preg_match($pattern2,$password)) {
+    /*if(!preg_match($pattern2,$password)) {
         $result .= "需要至少一个小写字母";
-    }
+    }*/
     if(!preg_match($pattern3,$password)) {
         $result .= "需要至少一个数字 ";
     }
